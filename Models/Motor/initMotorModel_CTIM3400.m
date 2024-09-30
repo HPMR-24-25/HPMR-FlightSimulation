@@ -34,13 +34,14 @@ thrustCurveData = load('M3400_ThrustCurve.mat');
 % 
 % thrustPolar = @(x) C(1)*x^4 + C(2)*x^3 + C(3)*x^2 + C(4)*x + C(5);
 
-% Makima interpolate into anonymous function
-thrustPolar = @(t) interp1(thrustCurveData.time, thrustCurveData.thrust, t, 'makima');
+thrustPolar = @(t) (t >= min(thrustCurveData.time) & t <= max(thrustCurveData.time)) ...
+                    .* interp1(thrustCurveData.time, thrustCurveData.thrust, t, 'makima') ...
+                    + (t < min(thrustCurveData.time) | t > max(thrustCurveData.time)) * 0;
 
-%% Prop Mass Curve
-propMassCurveData = load('M3400_MassCurve.mat');
-
-massPolar = @(t) interp1(propMassCurveData.time, propMassCurveData.mass, t, 'spline');
+%% Mass Curve
+massPolar = @(t) (t >= min(propMassCurveData.time) & t <= max(propMassCurveData.time)) ...
+                    .* interp1(propMassCurveData.time, propMassCurveData.mass, t, 'spline') ...
+                    + (t < min(propMassCurveData.time) | t > max(propMassCurveData.time)) * 0;
 
 ModelData.thrustPolar = thrustPolar;
 ModelData.consts = consts;

@@ -1,3 +1,0 @@
-function ModelData = initCFDAeroModel() 
-
-end
