@@ -21,6 +21,9 @@ simPaths = {
 
     %% Controls
     fullfile('Controls')
+
+    %% Utilities
+    fullfile('Utils');
     
 };
 

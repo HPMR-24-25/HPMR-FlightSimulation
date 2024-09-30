@@ -48,6 +48,11 @@ thrust = [];
 mass = [];
 cg = [];
 
+engConstsNode = motorDoc.getElementsByTagName('engine').item(0);
+
+ModelData.Isp = str2double(engConstsNode.getAttribute('Isp'));
+ModelData.t_b = str2double(engConstsNode.getAttribute('burn-time'));
+
 % Loop through each <eng-data> element and extract attributes
 for i = 0:engDataNodes.getLength-1
     % Get the current <eng-data> node
@@ -58,6 +63,7 @@ for i = 0:engDataNodes.getLength-1
     thrustVal = str2double(engDataNode.getAttribute('f'));
     massVal = str2double(engDataNode.getAttribute('m'));
     cgVal = str2double(engDataNode.getAttribute('cg'));
+    % ispVal = str2double(engDataNode.)
     
     % Append values to the arrays
     time(end+1) = timeVal;
@@ -86,6 +92,9 @@ thrustPolar = @(t) (t >= min(time) & t <= max(time)) ...
 massPolar = @(t) (t >= min(time) & t <= max(time)) ...
                     .* interp1(time, mass, t, 'spline') ...
                     + (t < min(time) | t > max(time)) * 0;
+
+
+%% Mass Flow Rate
 
 ModelData.thrustPolar = thrustPolar;
 ModelData.massPolar   = massPolar;

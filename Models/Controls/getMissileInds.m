@@ -10,10 +10,14 @@ function missileStateInds = getMissileInds()
     missileStateInds.py_ecef = 6;
     missileStateInds.pz_ecef = 7;
 
-    missileStateInds.vx_ecef = 5;
-    missileStateInds.vy_ecef = 6;
-    missileStateInds.vz_ecef = 7;
+    missileStateInds.vx_ecef = 8;
+    missileStateInds.vy_ecef = 9;
+    missileStateInds.vz_ecef = 10;
 
-    missileStateInds.mass = 8;
+    missileStateInds.w_ib_x = 11;
+    missileStateInds.w_ib_y = 12;
+    missileStateInds.w_ib_z = 13;
+
+    missileStateInds.mass   = 14;
 
 end
