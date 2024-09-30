@@ -6,6 +6,7 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
      % [qw, qx, qy, qz, px, py, pz, vx, vy, vz, m]
 %   U - Control Inputs to the vehicle
 %   AeroModel - Aerodynamic Model of the vehicle holding aerodynamic data
+    global drag_force_history; % Declare the global variable
 
     r_ecef = [x(inds.px_ecef); x(inds.py_ecef); x(inds.pz_ecef)];
 
@@ -28,7 +29,7 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     %% Rotation Matrix Setup
 
-    R_TE = [
+    R_ET = [
         -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
         -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
          cosd(lat),            0,         -sind(lat)
@@ -36,7 +37,9 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     R_TB = quat2rotm(quat);
 
-    R_EB = R_TE' * R_TB;
+    R_EB = R_ET * R_TB;
+
+    % R_EB = R_TE' * R_TB;
 
     %% Conversions
 
@@ -53,14 +56,21 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
     v_hat_B = R_EB' * v_hat_ecef; % [1] Unit Vector of Velocity in Body
 
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
-
     
     % Dynamic Pressure
     q_inf = 0.5 * rho_alt * norm(v_ecef)^2;
 
     %% Drag Force
+    
 
-    D_B = q_inf * AeroModel.CdLookup(M, AoA) * kins.S * v_hat_B;
+    % D_B = q_inf * AeroModel.CdLookup(M, AoA) * kins.S * -v_hat_B;
+    if(M <= 1)
+        C_D = 0.08*(1 + exp((-1)*(3*(1 - M))^2));
+    else
+        C_D = 0.08*(1 + exp((-1)*(M-1)^2));
+    end
+
+    D_B = q_inf * C_D * kins.S * (-v_hat_B);
 
     D_ECEF = R_EB * D_B;
 
@@ -72,27 +82,30 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     g_T = [0; 0; -const.g_e]; % **TODO** APPLY GRAVITY MODEL
 
-    G_ECEF = R_TE' * g_T; % [m/s^2] Gravity in ECEF
+    % G_ECEF = R_TE' * g_T; % [m/s^2] Gravity in ECEF
+    [gx_E, gy_E, gz_E] = xyz2grav(x(inds.px_ecef), x(inds.py_ecef), x(inds.pz_ecef));
 
     %% Thrust Calculation
     T_B = [MotorModel.thrustPolar(t); 0; 0];
 
     V_exit = MotorModel.Isp * const.g_e;
 
-    m_dot = norm(T_B) / V_exit;
+    % m_dot = norm(T_B) / V_exit;
+    m_dot = MotorModel.m_dotPolar(t);
 
     T_ECEF = R_EB * T_B;
 
     %% Position Dynamics
-    vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1)) / x(inds.mass) + G_ECEF(1);
-    vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2)) / x(inds.mass) + G_ECEF(2);
-    vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) + G_ECEF(3);
+    vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1)) / x(inds.mass) - gx_E;
+    vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2)) / x(inds.mass) - gx_E;
+    vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) - gy_E;
 
     %% Attitude Dynamics
     omegax_dot = 0;
     omegay_dot = (-kins.x_cp * norm(L_B)) / kins.I_y;
     omegaz_dot = 0;
 
+    drag_force_history(:, end + 1) = D_B; % Update global drag force history
     
 
     x_dot = [
@@ -111,5 +124,13 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
         omegaz_dot;
         -m_dot;
     ];
+
+    % if(t >= 45)
+    %     d = 1;
+    % end
+
+    if(T_ECEF == 0)
+        t = 1;
+    end
 
 end

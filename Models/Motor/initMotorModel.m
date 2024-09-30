@@ -68,7 +68,7 @@ for i = 0:engDataNodes.getLength-1
     % Append values to the arrays
     time(end+1) = timeVal;
     thrust(end+1) = thrustVal;
-    mass(end+1) = massVal;
+    mass(end+1) = massVal/1000; % [g] to [kg]
     cg(end+1) = cgVal;
 end
 
@@ -83,9 +83,10 @@ end
 
 %% Thrust Curve
 % Interpolate thrust data, return 0 if out of time bounds
-thrustPolar = @(t) (t >= min(time) & t <= max(time)) ...
+thrustPolar = @(t) max(0, ...
+                    (t >= min(time) & t <= max(time)) ...
                     .* interp1(time, thrust, t, 'makima') ...
-                    + (t < min(time) | t > max(time)) * 0;
+                    + (t < min(time) | t > max(time)) * 0);
 
 %% Mass Curve
 % Interpolate prop mass data, return 0 if out of time bounds
@@ -95,9 +96,17 @@ massPolar = @(t) (t >= min(time) & t <= max(time)) ...
 
 
 %% Mass Flow Rate
+% Define a small step size for the numerical derivative
+dt = 1e-6;  % Small time step for finite difference
+
+% Define m_dotPolar using a central difference method for the derivative
+m_dotPolar = @(t) (t >= min(time) & t <= max(time)) ...
+                    .* (-(massPolar(t + dt) - massPolar(t - dt)) / (2 * dt)) ...
+                    + (t < min(time) | t > max(time)) * 0;
 
 ModelData.thrustPolar = thrustPolar;
 ModelData.massPolar   = massPolar;
+ModelData.m_dotPolar  = m_dotPolar;
 
 if(motorPlots)
     figure('Name', 'Thrust Curve');
@@ -117,7 +126,7 @@ if(motorPlots)
     fplot(massPolar, [min(time), max(time)], 'r');
     hold off;
     title('Mass Curve');
-    ylabel('Mass (g)');
+    ylabel('Mass (kg)');
     xlabel('Time (s)');
     legend('ThrustPTS', 'Function');
     grid on;
