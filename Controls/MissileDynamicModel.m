@@ -6,7 +6,6 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
      % [qw, qx, qy, qz, px, py, pz, vx, vy, vz, m]
 %   U - Control Inputs to the vehicle
 %   AeroModel - Aerodynamic Model of the vehicle holding aerodynamic data
-    global drag_force_history; % Declare the global variable
 
     r_ecef = [x(inds.px_ecef); x(inds.py_ecef); x(inds.pz_ecef)];
 
@@ -38,8 +37,6 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
     R_TB = quat2rotm(quat);
 
     R_EB = R_ET * R_TB;
-
-    % R_EB = R_TE' * R_TB;
 
     %% Conversions
 
@@ -76,17 +73,16 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     %% Lift Force
     % L_B = q_inf * AeroModel.C(M, AoA) * kins.S * cross(v_hat_B, [1; 0; 0]);
-    L_B = 0;
+    L_B = [0; 0; 1000];
 
     L_ECEF = R_EB * L_B; % [N] Lift Force in ECEF
-
-    g_T = [0; 0; -const.g_e]; % **TODO** APPLY GRAVITY MODEL
 
     % G_ECEF = R_TE' * g_T; % [m/s^2] Gravity in ECEF
     [gx_E, gy_E, gz_E] = xyz2grav(x(inds.px_ecef), x(inds.py_ecef), x(inds.pz_ecef));
 
     %% Thrust Calculation
-    T_B = [MotorModel.thrustPolar(t); 0; 0];
+    F_T = MotorModel.thrustPolar(t);
+    T_B = [F_T; 0; 0];
 
     V_exit = MotorModel.Isp * const.g_e;
 
@@ -95,18 +91,17 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     T_ECEF = R_EB * T_B;
 
+    D_T = R_ET' * D_ECEF;
+
     %% Position Dynamics
-    vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1)) / x(inds.mass) - gx_E;
-    vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2)) / x(inds.mass) - gx_E;
-    vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) - gy_E;
+    vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1)) / x(inds.mass) + gx_E;
+    vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2)) / x(inds.mass) + gy_E;
+    vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) + gz_E;
 
     %% Attitude Dynamics
     omegax_dot = 0;
     omegay_dot = (-kins.x_cp * norm(L_B)) / kins.I_y;
     omegaz_dot = 0;
-
-    drag_force_history(:, end + 1) = D_B; % Update global drag force history
-    
 
     x_dot = [
         0;
