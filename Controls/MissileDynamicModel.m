@@ -73,7 +73,7 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     %% Lift Force
     % L_B = q_inf * AeroModel.C(M, AoA) * kins.S * cross(v_hat_B, [1; 0; 0]);
-    L_B = [0; 0; 1000];
+    L_B = [0; 0; 0];
 
     L_ECEF = R_EB * L_B; % [N] Lift Force in ECEF
 

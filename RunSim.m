@@ -39,7 +39,7 @@ launch_ECEF_m = lla2ecef(launchLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(45);
+pitch_0 = deg2rad(95);
 yaw_0 = deg2rad(0);
 
 q_0 = rpy2quat(roll_0, pitch_0, yaw_0);
