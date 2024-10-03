@@ -30,7 +30,7 @@ simCfg.time = time;
 % [launchLat, launchLon, launchAlt] = selectLaunchLocation();
 launchLat = 44.8244069; % [deg] Latitude
 launchLon = -73.1656987; % [deg] Longitude
-launchAlt = 0; % [m] Altitude MSL
+launchAlt = 10; % [m] Altitude MSL
 
 launchLLA = [launchLat, launchLon, launchAlt];
 currLLA = launchLLA;
@@ -39,10 +39,10 @@ launch_ECEF_m = lla2ecef(launchLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(95);
+pitch_0 = deg2rad(85);
 yaw_0 = deg2rad(0);
 
-q_0 = rpy2quat(roll_0, pitch_0, yaw_0);
+q_0 = eul2quat(roll_0, pitch_0, yaw_0);
 
 % Angular Rate Initialization
 w_ib_x = 0.00; % [rad/s]
@@ -81,8 +81,8 @@ xRecord = nan(length(x_0), numTimePts);
 xRecord(:,1) = x_t;
 
 colNum = 1;
-while(t <= time.tf)
-% while(currLLA(3) >= launchAlt-10)
+% while(t <= time.tf)
+while(currLLA(3) >= 0)
     colNum = colNum + 1;
 
     t = t + time.dt;
@@ -100,6 +100,7 @@ while(t <= time.tf)
     tRecord(1, colNum) = t;
 end
 
+%% Plot Vehicle Trajectory
 lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
 % Create a geoglobe
@@ -108,24 +109,26 @@ g = geoglobe(uif);
 
 geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
 
-function q_total = rpy2quat(roll, pitch, yaw)
-    % Function to convert Roll, Pitch, Yaw angles to a quaternion
-    % Inputs: roll, pitch, yaw (in radians)
-    
-    % Half-angles for quaternion computation
-    half_roll = roll / 2;
-    half_pitch = pitch / 2;
-    half_yaw = yaw / 2;
-    
-    % Quaternion for roll (about X axis)
-    q_roll = [cos(half_roll), sin(half_roll), 0, 0]; % [qw, qx, qy, qz]
-    
-    % Quaternion for pitch (about Y axis)
-    q_pitch = [cos(half_pitch), 0, sin(half_pitch), 0]; % [qw, qx, qy, qz]
-    
-    % Quaternion for yaw (about Z axis)
-    q_yaw = [cos(half_yaw), 0, 0, sin(half_yaw)]; % [qw, qx, qy, qz]
-    
-    % Quaternion multiplication: q_total = q_yaw * q_pitch * q_roll
-    q_total = quatmultiply(quatmultiply(q_yaw, q_pitch), q_roll);
-end
+%% Euler Angles
+eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
+
+yawHist   = rad2deg(eulHist(:,1));
+pitchHist = rad2deg(eulHist(:,2));
+rollHist  = rad2deg(eulHist(:,3));
+
+% Plot
+figure('Name', 'Orientation');
+plot(tRecord(:), yawHist);
+hold on;
+plot(tRecord(:), pitchHist);
+plot(tRecord(:), rollHist);
+hold off;
+title("Euler Angles");
+legend('Yaw', 'Pitch', 'Roll');
+
+figure('Name', 'Altitude');
+plot(tRecord(:), lla(:,3))
+title("Altitude Vs. Time");
+ylabel("Altitude (m)");
+xlabel("Time (s)");
+grid on;

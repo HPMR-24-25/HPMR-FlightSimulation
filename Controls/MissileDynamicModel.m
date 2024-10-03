@@ -50,7 +50,7 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
 
     v_hat_ecef = v_ecef / norm(v_ecef); % [1] Unit Vector of Velocity in ECEF
 
-    v_hat_B = R_EB' * v_hat_ecef; % [1] Unit Vector of Velocity in Body
+    v_hat_B = R_EB' * v_hat_ecef % [1] Unit Vector of Velocity in Body
 
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
     
@@ -99,33 +99,37 @@ function x_dot = MissileDynamicModel(x, t, AeroModel, MotorModel, const, kins, i
     vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) + gz_E;
 
     %% Attitude Dynamics
-    omegax_dot = 0;
-    omegay_dot = (-kins.x_cp * norm(L_B)) / kins.I_y;
-    omegaz_dot = 0;
+    phi_dot = 0;
+    % omegay_dot = (-kins.x_cp * norm(L_B)) / kins.I_y;
+    pitch_dot = 0;
+    yaw_dot = 0;
+    
+    p = x(11);
+    q = x(12);
+    r = x(13);
+
+    q_dot = [
+         0.5*p*x(2) - 0.5*q*x(3) - 0.5*r*x(4);
+         0.5*p*x(1) - 0.5*q*x(4) + 0.5*r*x(3);
+         0.5*p*x(4) + 0.5*q*x(1) - 0.5*r*x(2);
+        -0.5*p*x(3) + 0.5*q*x(2) + 0.5*r*x(1);
+    ];
 
     x_dot = [
-        0;
-        0;
-        0;
-        0;
+        q_dot(1);
+        q_dot(2);
+        q_dot(3);
+        q_dot(4);
         x(inds.vx_ecef);
         x(inds.vy_ecef);
         x(inds.vz_ecef);
         vx_dot;
         vy_dot;
         vz_dot;
-        omegax_dot;
-        omegay_dot;
-        omegaz_dot;
+        phi_dot;
+        pitch_dot;
+        yaw_dot;
         -m_dot;
     ];
-
-    % if(t >= 45)
-    %     d = 1;
-    % end
-
-    if(T_ECEF == 0)
-        t = 1;
-    end
 
 end
