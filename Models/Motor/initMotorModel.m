@@ -85,13 +85,13 @@ end
 % Interpolate thrust data, return 0 if out of time bounds
 thrustPolar = @(t) max(0, ...
                     (t >= min(time) & t <= max(time)) ...
-                    .* interp1(time, thrust, t, 'makima') ...
+                    .* interp1(time, thrust, t, 'linear') ...
                     + (t < min(time) | t > max(time)) * 0);
 
 %% Mass Curve
 % Interpolate prop mass data, return 0 if out of time bounds
 massPolar = @(t) (t >= min(time) & t <= max(time)) ...
-                    .* interp1(time, mass, t, 'spline') ...
+                    .* interp1(time, mass, t, 'linear') ...
                     + (t < min(time) | t > max(time)) * 0;
 
 
@@ -100,9 +100,10 @@ massPolar = @(t) (t >= min(time) & t <= max(time)) ...
 dt = 1e-6;  % Small time step for finite difference
 
 % Define m_dotPolar using a central difference method for the derivative
-m_dotPolar = @(t) (t >= min(time) & t <= max(time)) ...
+m_dotPolar = @(t) max(0, ...
+                    (t >= min(time) & t <= max(time)) ...
                     .* (-(massPolar(t + dt) - massPolar(t - dt)) / (2 * dt)) ...
-                    + (t < min(time) | t > max(time)) * 0;
+                    + (t < min(time) | t > max(time)) * 0);
 
 ModelData.thrustPolar = thrustPolar;
 ModelData.massPolar   = massPolar;
@@ -128,7 +129,14 @@ if(motorPlots)
     title('Mass Curve');
     ylabel('Mass (kg)');
     xlabel('Time (s)');
-    legend('ThrustPTS', 'Function');
+    legend('MassPTS', 'Function');
+    grid on;
+
+    figure('Name', 'MDot Curve');
+    fplot(m_dotPolar, [min(time), max(time)], 'r');
+    title('Mass Flowrate Curve');
+    ylabel('M_dot (kg/s)');
+    xlabel('Time (s)');
     grid on;
 end
 

@@ -28,9 +28,9 @@ simCfg.time = time;
 
 %% Launch Site Initialization
 % [launchLat, launchLon, launchAlt] = selectLaunchLocation();
-launchLat = 44.8244069; % [deg] Latitude
-launchLon = -73.1656987; % [deg] Longitude
-launchAlt = 10; % [m] Altitude MSL
+launchLat =  42.2738703; % [deg] Latitude
+launchLon = -71.8098593; % [deg] Longitude
+launchAlt = 180; % [m] Altitude MSL
 
 launchLLA = [launchLat, launchLon, launchAlt];
 currLLA = launchLLA;
@@ -50,9 +50,9 @@ w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
 
 %% Velocity Initialization
-Vx_E_0 = 1e-6; % [m/s]
-Vy_E_0 = 1e-6; % [m/s]
-Vz_E_0 = 1e-6; % [m/s]
+Vx_E_0 = 1e-2; % [m/s]
+Vy_E_0 = 1e-2; % [m/s]
+Vz_E_0 = 1e-2; % [m/s]
 
 %% State Initialization
 x_0 = [
@@ -80,17 +80,54 @@ tRecord(1,1) = t;
 xRecord = nan(length(x_0), numTimePts);
 xRecord(:,1) = x_t;
 
+tSpan = [0, time.tf];  % Start time and end time
+options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
+
+% Loop until altitude (currLLA(3)) becomes negative (missile hits the ground)
 colNum = 1;
+% while(currLLA(3) >= 0)
+%     colNum = colNum + 1;
+% 
+%     % Define the anonymous function for ode45 that captures the inputs
+%     missileModelODE = @(t, x_t) MissileDynamicModel(x_t, t, AeroModel, MotorModel, const, kins, inds);
+% 
+%     % Call ode45 for a small time step from current t to t + dt
+%     [t_out, x_out] = ode45(missileModelODE, [t, t + time.dt], x_t, options);
+% 
+%     % Update time and state variables with the last output from ode45
+%     t = t_out(end);
+%     x_t = x_out(end, :)';  % Transpose to maintain consistency with your original state vector format
+% 
+%     % Convert ECEF position to LLA for altitude check
+%     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
+% 
+%     % Record the results for future analysis
+%     xRecord(:, colNum) = x_t;
+%     tRecord(1, colNum) = t;
+% end
+
+% colNum = 1;
 % while(t <= time.tf)
 while(currLLA(3) >= 0)
     colNum = colNum + 1;
 
     t = t + time.dt;
 
-    k1 = time.dt * MissileDynamicModel(x_t, t, AeroModel, MotorModel, const, kins, inds);
-    k2 = time.dt * MissileDynamicModel(x_t + (1/2)*k1, t, AeroModel, MotorModel, const, kins, inds);
-    k3 = time.dt * MissileDynamicModel(x_t + (1/2)*k2, t, AeroModel, MotorModel, const, kins, inds);
-    k4 = time.dt * MissileDynamicModel(x_t + k3, t, AeroModel, MotorModel, const, kins, inds);
+    % canardInput.dPitch = rad2deg(10); % [rad] Canard Deflection
+    % canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
+
+    if(t >= 4 && t <= 8)
+        canardInput.dPitch = deg2rad(0); % [rad] Canard Deflection
+        canardInput.dYaw   = deg2rad(0); % [rad] Canard Deflection
+    else
+        canardInput.dPitch = deg2rad(0); % [rad] Canard Deflection
+        canardInput.dYaw   = deg2rad(0); % [rad] Canard Deflection
+    end
+
+    k1 = time.dt * MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+    k2 = time.dt * MissileDynamicModel(x_t + (1/2)*k1, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+    k3 = time.dt * MissileDynamicModel(x_t + (1/2)*k2, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+    k4 = time.dt * MissileDynamicModel(x_t + k3, t, canardInput, AeroModel, MotorModel, const, kins, inds);
 
     x_t = x_t + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
 
@@ -104,10 +141,10 @@ end
 lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
 % Create a geoglobe
-uif = uifigure('Name', 'Vehicle Trajectory');
-g = geoglobe(uif);
-
-geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
+% uif = uifigure('Name', 'Vehicle Trajectory');
+% g = geoglobe(uif);
+% 
+% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
 
 %% Euler Angles
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
