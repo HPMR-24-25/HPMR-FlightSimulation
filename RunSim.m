@@ -44,7 +44,7 @@ yaw_0 = deg2rad(0);
 
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
 
-% Angular Rate Initialization
+%$ Angular Rate Initialization
 w_ib_x = 0.00; % [rad/s]
 w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
@@ -117,7 +117,7 @@ while(currLLA(3) >= 0)
     % canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
 
     if(t >= 4 && t <= 8)
-        canardInput.dPitch = deg2rad(0); % [rad] Canard Deflection
+        canardInput.dPitch = deg2rad(15); % [rad] Canard Deflection
         canardInput.dYaw   = deg2rad(0); % [rad] Canard Deflection
     else
         canardInput.dPitch = deg2rad(0); % [rad] Canard Deflection
