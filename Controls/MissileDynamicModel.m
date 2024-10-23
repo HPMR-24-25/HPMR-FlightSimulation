@@ -55,7 +55,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
 
     % D_B = q_inf * AeroModel.CdLookup(M, AoA) * kins.S * -v_hat_B;
     if(M <= 1)
-        C_D = 0.08*(1 + exp((-1)*(3*(1 - M))^2))
+        C_D = 0.08*(1 + exp((-1)*(3*(1 - M))^2));
     else
         C_D = 0.08*(1 + exp((-1)*(M-1)^2));
     end
@@ -73,7 +73,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     [gx_E, gy_E, gz_E] = xyz2grav(x(inds.px_ecef), x(inds.py_ecef), x(inds.pz_ecef));
     %% Thrust Calculation
     F_T = MotorModel.thrustPolar(t);
-    T_B = [F_T; 0; 0]
+    T_B = [F_T; 0; 0];
 
     V_exit = MotorModel.Isp * const.g_e;
 
