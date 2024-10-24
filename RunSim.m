@@ -65,11 +65,21 @@ Vy_E_0 = 1e-2; % [m/s]
 Vz_E_0 = 1e-2; % [m/s]
 
 %% Target Velocity Initialization
-Vx_target = 482.26; % [m/s]
-Vy_target = 0; % [m/s]
+V_NED_m = 482.26; %[m/s]
+psi = 0;
+Vx_target = V_NED_m*sin(psi); % [m/s]
+Vy_target = V_NED_m*cos(psi); % [m/s]
 Vz_target = 0; % [m/s]
 
-V_target = [Vx_target, Vy_target, Vz_target];
+R_ET = [
+        -sind(targetLat)*cosd(targetLon), -sind(targetLon), -cosd(targetLat)*cosd(targetLon);
+        -sind(targetLat)*sind(targetLon),  cosd(targetLon), -cosd(targetLat)*sind(targetLon);
+         cosd(targetLat),                                0,                  -sind(targetLat)
+    ];
+
+V_target_NED = [Vx_target; Vy_target; Vz_target];
+
+V_target_ECEF = R_ET*V_target_NED;
 
 %% State Initialization
 x_0 = [
@@ -87,10 +97,7 @@ x_0 = [
 x_t = x_0;
 
 %% Target State Initialization
-x_0_target = [
-    target_ECEF';
-    V_target'
-    ];
+x_0_target = [target_ECEF'; V_target_ECEF];
 
 x_t_target = x_0_target;
 x_t_targetCircle = x_t_target;
@@ -197,10 +204,11 @@ position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_ta
 position_targetCircle_ECEF = [xRecord_targetCircle(1, :)', xRecord_targetCircle(2, :)', xRecord_targetCircle(3, :)'];
 
 % Create a geoglobe
-% uif = uifigure('Name', 'Vehicle Trajectory');
-% g = geoglobe(uif);
-% 
-% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
+uif = uifigure('Name', 'Vehicle Trajectory');
+g = geoglobe(uif);
+
+geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
+geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3));
 
 %% Euler Angles
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
@@ -247,22 +255,22 @@ xlabel("Time (s)");
 grid on;
 
 
-figure('Name', 'Target Position Circle');
-subplot(3,1,1);
-plot(tRecord(:), position_targetCircle_ECEF(:,1))
-title("Target Position X Vs. Time");
-ylabel("Position (m)");
-xlabel("Time (s)");
-grid on;
-subplot(3,1,2);
-plot(tRecord(:), position_targetCircle_ECEF(:,2))
-title("Target Position Y Vs. Time");
-ylabel("Position (m)");
-xlabel("Time (s)");
-grid on;
-subplot(3,1,3);
-plot(tRecord(:), position_targetCircle_ECEF(:,3))
-title("Target Position Z Vs. Time");
-ylabel("Position (m)");
-xlabel("Time (s)");
-grid on;
+% figure('Name', 'Target Position Circle');
+% subplot(3,1,1);
+% plot(tRecord(:), position_targetCircle_ECEF(:,1))
+% title("Target Position X Vs. Time");
+% ylabel("Position (m)");
+% xlabel("Time (s)");
+% grid on;
+% subplot(3,1,2);
+% plot(tRecord(:), position_targetCircle_ECEF(:,2))
+% title("Target Position Y Vs. Time");
+% ylabel("Position (m)");
+% xlabel("Time (s)");
+% grid on;
+% subplot(3,1,3);
+% plot(tRecord(:), position_targetCircle_ECEF(:,3))
+% title("Target Position Z Vs. Time");
+% ylabel("Position (m)");
+% xlabel("Time (s)");
+% grid on;
