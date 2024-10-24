@@ -15,7 +15,9 @@ R_ET = [
 
 V_m = sqrt(x(4)^2+x(5)^2+x(6)^2);
 
-psi = t;
+% can change psi to 0 for straight line
+% can change psi to t for circle
+psi = 0;
 V = R_ET*[V_m*sin(psi); V_m*cos(psi); 0];
 
 x_dot = [V; 0; 0; 0];
