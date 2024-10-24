@@ -178,19 +178,10 @@ while(currLLA(3) >= 0)
 
     x_t_target = x_t_target + (1/5)*k1_target + (1/3)*k2_target + (1/3)*k3_target + (1/6)*k4_target;
 
-    % circle
-    k1_targetCircle = time.dt * TargetDynamicModelCircle(x_t_targetCircle, t);
-    k2_targetCircle = time.dt * TargetDynamicModelCircle(x_t_targetCircle + (1/2)*k1_targetCircle, t);
-    k3_targetCircle = time.dt * TargetDynamicModelCircle(x_t_targetCircle + (1/2)*k2_targetCircle, t);
-    k4_targetCircle = time.dt * TargetDynamicModelCircle(x_t_targetCircle + k3_targetCircle, t);
-
-    x_t_targetCircle = x_t_targetCircle + (1/5)*k1_targetCircle + (1/3)*k2_targetCircle + (1/3)*k3_targetCircle + (1/6)*k4_targetCircle;
-
     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
 
     xRecord(:, colNum) = x_t;
     xRecord_target(:, colNum) = x_t_target;
-    xRecord_targetCircle(:, colNum) = x_t_targetCircle;
     tRecord(1, colNum) = t;
 end
 
@@ -200,8 +191,6 @@ lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(in
 lla_target = ecef2lla([xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)']);
 
 position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)'];
-
-position_targetCircle_ECEF = [xRecord_targetCircle(1, :)', xRecord_targetCircle(2, :)', xRecord_targetCircle(3, :)'];
 
 % Create a geoglobe
 uif = uifigure('Name', 'Vehicle Trajectory');
@@ -253,24 +242,3 @@ title("Target Position Z Vs. Time");
 ylabel("Position (m)");
 xlabel("Time (s)");
 grid on;
-
-
-% figure('Name', 'Target Position Circle');
-% subplot(3,1,1);
-% plot(tRecord(:), position_targetCircle_ECEF(:,1))
-% title("Target Position X Vs. Time");
-% ylabel("Position (m)");
-% xlabel("Time (s)");
-% grid on;
-% subplot(3,1,2);
-% plot(tRecord(:), position_targetCircle_ECEF(:,2))
-% title("Target Position Y Vs. Time");
-% ylabel("Position (m)");
-% xlabel("Time (s)");
-% grid on;
-% subplot(3,1,3);
-% plot(tRecord(:), position_targetCircle_ECEF(:,3))
-% title("Target Position Z Vs. Time");
-% ylabel("Position (m)");
-% xlabel("Time (s)");
-% grid on;
