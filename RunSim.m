@@ -44,7 +44,7 @@ yaw_0 = deg2rad(0);
 
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
 
-%$ Angular Rate Initialization
+% Angular Rate Initialization
 w_ib_x = 0.00; % [rad/s]
 w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
@@ -141,10 +141,10 @@ end
 lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
 % Create a geoglobe
-% uif = uifigure('Name', 'Vehicle Trajectory');
-% g = geoglobe(uif);
-% 
-% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
+uif = uifigure('Name', 'Vehicle Trajectory');
+g = geoglobe(uif);
+
+geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
 
 %% Euler Angles
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');

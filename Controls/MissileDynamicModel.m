@@ -5,7 +5,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
 %   X - Current state of the vehicle
      % [qw, qx, qy, qz, px, py, pz, vx, vy, vz, m]
 %   U - Control Inputs to the vehicle
-%   AeroModel - Aerodynamic Model of the vehicle holding aerodynamic data
+%   AeroModel - Aerodynamic Model of the vehicle holding aerodynamic\
 
     %% Calcualte LLA to get atmospheric quantities
 
