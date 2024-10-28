@@ -197,7 +197,7 @@ uif = uifigure('Name', 'Vehicle Trajectory');
 g = geoglobe(uif);
 
 geoplot3(g, lla(:, 1), lla(:,2), lla(:,3));
-geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3));
+geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
 
 %% Euler Angles
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
