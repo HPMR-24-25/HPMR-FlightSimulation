@@ -1,6 +1,6 @@
 function setupEnv()
 %% setupEnv - Configures simulation environment vars
-
+% test
 simPaths = {
 
     %% Models
