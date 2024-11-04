@@ -7,7 +7,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
 %   U - Control Inputs to the vehicle
 %   AeroModel - Aerodynamic Model of the vehicle holding aerodynamic data
 
-    %% Calcualte LLA to get atmospheric quantities
+    %% Calculate LLA to get atmospheric quantities
 
     r_ecef = [x(inds.px_ecef); x(inds.py_ecef); x(inds.pz_ecef)];
 
@@ -49,23 +49,28 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
     
     % Dynamic Pressure
-    q_inf = 0.5 * rho_alt * norm(v_ecef)^2;
+    q_inf = 0.5 * rho_alt * (norm(v_ecef)^2);
 
     %% Missile Body Drag
 
-    % D_B = q_inf * AeroModel.CdLookup(M, AoA) * kins.S * -v_hat_B;
-    if(M <= 1)
-        C_D = 0.08*(1 + exp((-1)*(3*(1 - M))^2));
-    else
-        C_D = 0.08*(1 + exp((-1)*(M-1)^2));
+    C_D = AeroModel.CdLookup(M, AoA);
+
+    if(isnan(C_D)) 
+        C_D = AeroModel.CdLookup(M + 0.1, 0);
     end
+    % if(M <= 1)
+    %     C_D = 0.08*(1 + exp((-1)*(3*(1 - M))^2));
+    % else
+    %     C_D = 0.08*(1 + exp((-1)*(M-1)^2));
+    % end
+    % C_D = 0.3;
 
     D_B = q_inf * C_D * kins.S * (-v_hat_B);
 
     D_ECEF = R_EB * D_B;
 
     %% Missile Body Lift
-    % L_B = q_inf * AeroModel.C(M, AoA) * kins.S * cross(v_hat_B, [1; 0; 0]);
+    % L_B = q_inf * AeroModel.ClLookup(M, AoA) * kins.S * cross(v_hat_B, [1; 0; 0]);
     L_B = [0; 0; 0];
 
     L_ECEF = R_EB * L_B; % [N] Lift Force in ECEF
@@ -93,6 +98,11 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2)) / x(inds.mass) + gy_E;
     vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) + gz_E;
 
+    v_NED = R_ET' * v_ecef;
+
+    D_NED = R_ET' * D_ECEF;
+    T_NED = R_ET' * T_ECEF;
+
     %% Attitude Dynamics
     % phi_dot = 0;
     % % omegay_dot = (-kins.x_cp * norm(L_B)) / kins.I_y;
@@ -103,7 +113,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     % q = x(12);
     % r = x(13);
 
-    w_ib_x = 0.1;
+    w_ib_x = 0;
     w_ib_y = 0;
     w_ib_z = 0;
 
@@ -143,7 +153,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
         -m_dot;
     ];
 
-    if(t >= 4 && t <= 8)
+    if(t >= 3 && t <= 8)
         brk = 0;
     end
 
