@@ -24,4 +24,14 @@ function ModelData = initMissileAeroModel()
 
     ModelData.CdLookup = @(inputMach, inputAoA) CD_lookup(inputMach, inputAoA);
     ModelData.ClLookup = @(inputMach, inputAoA) CL_lookup(inputMach, inputAoA);
+
+    % <<< Guesstimated Values >>>
+
+    % Canard Lift Force Deflection Coefficient
+    ModelData.canard.CL_delta = 2;
+
+    % Aerodynamic Restoring Moment Coefficients
+    ModelData.damping.Cd_x = 0.3;
+    ModelData.damping.Cd_y = 0.5;
+    ModelData.damping.Cd_z = 0.5;
 end

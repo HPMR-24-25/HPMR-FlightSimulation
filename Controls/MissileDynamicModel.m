@@ -47,23 +47,17 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     v_hat_B = R_EB' * v_hat_ecef; % [1] Unit Vector of Velocity in Body
 
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
-    
-    % Dynamic Pressure
-    q_inf = 0.5 * rho_alt * (norm(v_ecef)^2);
 
     %% Missile Body Drag
+
+    % Dynamic Pressure
+    q_inf = 0.5 * rho_alt * (norm(v_ecef)^2);
 
     C_D = AeroModel.CdLookup(M, AoA);
 
     if(isnan(C_D)) 
         C_D = AeroModel.CdLookup(M + 0.1, 0);
     end
-    % if(M <= 1)
-    %     C_D = 0.08*(1 + exp((-1)*(3*(1 - M))^2));
-    % else
-    %     C_D = 0.08*(1 + exp((-1)*(M-1)^2));
-    % end
-    % C_D = 0.3;
 
     D_B = q_inf * C_D * kins.S * (-v_hat_B);
 
@@ -75,8 +69,10 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
 
     L_ECEF = R_EB * L_B; % [N] Lift Force in ECEF
 
+    %% Gravity Model
     [gx_E, gy_E, gz_E] = xyz2grav(x(inds.px_ecef), x(inds.py_ecef), x(inds.pz_ecef));
-    %% Thrust Calculation
+    
+    %% Motor Thrust
     F_T = MotorModel.thrustPolar(t);
     T_B = [F_T; 0; 0];
 
@@ -91,51 +87,55 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
         a = 0;
     end
 
-    % D_T = R_ET' * D_ECEF;
+    %% Canard Forces and Moments
+    % Canard-induced lift forces and moments
+    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1;
+    L_c_2 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d2;
+    L_c_3 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d3;
+    L_c_4 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d4;
+
+    M_1_y = kins.canard.x_cp * L_c_1;
+    M_2_y = kins.canard.x_cp * L_c_2;
+    M_3_z = kins.canard.x_cp * L_c_3;
+    M_4_z = kins.canard.x_cp * L_c_4;
+
+    F_x_B = 0;
+    F_y_B = L_c_1 + L_c_3;
+    F_z_B = L_c_2 + L_c_4;
+    F_c_B = [F_x_B; F_y_B; F_z_B];
+
+    F_c_ECEF = R_EB * F_c_B;
+
+    %% Damping Moments
+    % Damping moments (proportional to angular velocities)
+    M_damp_x = -AeroModel.damping.Cd_x * q_inf * kins.S * kins.len * x(inds.w_ib_x);
+    M_damp_y = -AeroModel.damping.Cd_y * q_inf * kins.S * kins.len * x(inds.w_ib_y);
+    M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.len * x(inds.w_ib_z);
+
+    %% Total Moments
+    M_x_b = 0 + M_damp_x;       % Roll moment with damping
+    M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
+    M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
+
+    %% Angular Accelerations
+    dw_ib_x = M_x_b / kins.I_x;
+    dw_ib_y = M_y_b / kins.I_y;
+    dw_ib_z = M_z_b / kins.I_z;
+
+    %% Quaternion Update
+    q_dot = 0.5 * [
+        -x(2), -x(3), -x(4);
+         x(1), -x(4),  x(3);
+         x(4),  x(1), -x(2);
+        -x(3),  x(2),  x(1);
+    ] * [x(inds.w_ib_x); x(inds.w_ib_y); x(inds.w_ib_z)];
 
     %% Position Dynamics
-    vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1)) / x(inds.mass) + gx_E;
-    vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2)) / x(inds.mass) + gy_E;
-    vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3)) / x(inds.mass) + gz_E;
+    vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1) + F_c_ECEF(1)) / x(inds.mass) + gx_E;
+    vy_dot = (D_ECEF(2) + L_ECEF(2) + T_ECEF(2) + F_c_ECEF(2)) / x(inds.mass) + gy_E;
+    vz_dot = (D_ECEF(3) + L_ECEF(3) + T_ECEF(3) + F_c_ECEF(3)) / x(inds.mass) + gz_E;
 
-    v_NED = R_ET' * v_ecef;
-
-    D_NED = R_ET' * D_ECEF;
-    T_NED = R_ET' * T_ECEF;
-
-    %% Attitude Dynamics
-    % phi_dot = 0;
-    % % omegay_dot = (-kins.x_cp * norm(L_B)) / kins.I_y;
-    % pitch_dot = 0;
-    % yaw_dot = 0;
-    
-    % p = x(11);
-    % q = x(12);
-    % r = x(13);
-
-    w_ib_x = 0;
-    w_ib_y = 0;
-    w_ib_z = 0;
-
-    p = w_ib_x;
-    q = w_ib_y;
-    r = w_ib_z;
-
-    dw_ib_x = 0;
-    dw_ib_y = 0;
-    dw_ib_z = 0;
-
-    % pitch_dot = M_c_pitch / (kins.I_y*x(inds.mass));
-    % yaw_dot   = M_c_yaw / (kins.I_z*x(inds.mass));
-    % roll_dot = 0;
-
-    q_dot = [
-         0.5*p*x(2) - 0.5*q*x(3) - 0.5*r*x(4);
-         0.5*p*x(1) - 0.5*q*x(4) + 0.5*r*x(3);
-         0.5*p*x(4) + 0.5*q*x(1) - 0.5*r*x(2);
-        -0.5*p*x(3) + 0.5*q*x(2) + 0.5*r*x(1);
-    ];
-
+    %% State Derivative Vector
     x_dot = [
         q_dot(1);
         q_dot(2);
@@ -153,7 +153,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
         -m_dot;
     ];
 
-    if(t >= 3 && t <= 8)
+    if(t >= 4 && t <= 8)
         brk = 0;
     end
 
