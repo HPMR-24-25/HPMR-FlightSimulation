@@ -22,7 +22,7 @@ MotorModel = initMotorModel();
 time.dt = 0.01; % [s] Time Step
 time.t0 = 0; % [s] Initial Time
 % time.tf = 60*3; % [s] Final Time
-time.tf = 200;
+time.tf = 30;
 
 simCfg.time = time;
 
@@ -107,8 +107,8 @@ colNum = 1;
 % end
 
 % colNum = 1;
-% while(t <= time.tf)
-while(currLLA(3) >= 0)
+while(t <= time.tf)
+% while(currLLA(3) >= 0)
     colNum = colNum + 1;
 
     t = t + time.dt;

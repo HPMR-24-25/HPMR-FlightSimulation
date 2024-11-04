@@ -71,14 +71,15 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     L_ECEF = R_EB * L_B; % [N] Lift Force in ECEF
 
     [gx_E, gy_E, gz_E] = xyz2grav(x(inds.px_ecef), x(inds.py_ecef), x(inds.pz_ecef));
+
     %% Thrust Calculation
     F_T = MotorModel.thrustPolar(t);
-    T_B = [F_T; 0; 0]
+    T_B = [F_T; 0; 0];
 
     V_exit = MotorModel.Isp * const.g_e;
 
-    m_dot = norm(T_B) / V_exit;
-    % m_dot = MotorModel.m_dotPolar(t);
+    % m_dot = norm(T_B) / V_exit;
+    m_dot = MotorModel.m_dotPolar(t);
 
     T_ECEF = R_EB * T_B;
 
@@ -103,7 +104,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     % q = x(12);
     % r = x(13);
 
-    w_ib_x = 0.1;
+    w_ib_x = 0;
     w_ib_y = 0;
     w_ib_z = 0;
 
