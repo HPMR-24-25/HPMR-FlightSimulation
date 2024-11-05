@@ -95,9 +95,14 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     L_c_4 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d4;
 
     M_1_y = kins.canard.x_cp * L_c_1;
-    M_2_y = kins.canard.x_cp * L_c_2;
+    M_2_y = -kins.canard.x_cp * L_c_2;
     M_3_z = kins.canard.x_cp * L_c_3;
-    M_4_z = kins.canard.x_cp * L_c_4;
+    M_4_z = -kins.canard.x_cp * L_c_4;
+
+    M_1_x = kins.canard.z_cp_13 * L_c_1;
+    M_2_x = kins.canard.y_cp_24 * L_c_2;
+    M_3_x = kins.canard.z_cp_13 * L_c_3;
+    M_4_x = kins.canard.y_cp_24 * L_c_4;
 
     F_x_B = 0;
     F_y_B = L_c_1 + L_c_3;
@@ -108,12 +113,13 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
 
     %% Damping Moments
     % Damping moments (proportional to angular velocities)
+    %% I*omega_ib_dot + omega_ib x I = Sum_Moments
     M_damp_x = -AeroModel.damping.Cd_x * q_inf * kins.S * kins.len * x(inds.w_ib_x);
     M_damp_y = -AeroModel.damping.Cd_y * q_inf * kins.S * kins.len * x(inds.w_ib_y);
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.len * x(inds.w_ib_z);
 
     %% Total Moments
-    M_x_b = 0 + M_damp_x;       % Roll moment with damping
+    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x;       % Roll moment with damping
     M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
     M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
 

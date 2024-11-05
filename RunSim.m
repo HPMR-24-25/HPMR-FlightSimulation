@@ -6,7 +6,8 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-kins = HPMR_MissileKinematics();
+% kins = HPMR_MissileKinematics();
+kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
@@ -49,13 +50,13 @@ target_ECEF = lla2ecef(targetLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(80);
-yaw_0 = deg2rad(0);
+pitch_0 = deg2rad(42);
+yaw_0 = deg2rad(80);
 
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
 
 %$ Angular Rate Initialization
-w_ib_x = 0.00; % [rad/s]
+w_ib_x = 10.00; % [rad/s]
 w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
 
@@ -63,6 +64,9 @@ w_ib_z = 0.00; % [rad/s]
 Vx_E_0 = 1e-2; % [m/s]
 Vy_E_0 = 1e-2; % [m/s]
 Vz_E_0 = 1e-2; % [m/s]
+
+%% Initial Mass
+m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
 
 %% Target Velocity Initialization
 V_NED_m = 482.26; %[m/s]
@@ -91,7 +95,7 @@ x_0 = [
     w_ib_x;
     w_ib_y;
     w_ib_z;
-    kins.m_i;
+    m_0;
 ];
 
 x_t = x_0;
@@ -122,44 +126,17 @@ xRecord_targetCircle(:,1) = x_t_targetCircle;
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
-% Loop until altitude (currLLA(3)) becomes negative (missile hits the ground)
-% colNum = 1;
-% while(currLLA(3) >= 0)
-%     colNum = colNum + 1;
-% 
-%     canardInput.dPitch = rad2deg(0); % [rad] Canard Deflection
-%     canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
-% 
-%     % Define the anonymous function for ode45 that captures the inputs
-%     missileModelODE = @(t, x_t) MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-% 
-%     % Call ode45 for a small time step from current t to t + dt
-%     [t_out, x_out] = ode45(missileModelODE, [t, t + time.dt], x_t, options);
-% 
-%     % Update time and state variables with the last output from ode45
-%     t = t_out(end);
-%     x_t = x_out(end, :)';  % Transpose to maintain consistency with your original state vector format
-% 
-%     % Convert ECEF position to LLA for altitude check
-%     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
-% 
-%     % Record the results for future analysis
-%     xRecord(:, colNum) = x_t;
-%     tRecord(1, colNum) = t;
-% end
-
 colNum = 1;
-% while(t <= time.tf)
-while(currLLA(3) >= 0)
+while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
-    t = t + time.dt;
-    if(t >= 4 && t <= 4.5)
-        % canardInput.dPitch = deg2rad(15); % [rad] Canard Deflection
-        % canardInput.dYaw   = deg2rad(0); % [rad] Canard Deflection
-        canardInput.d1 = deg2rad(4);
+    % canardInput.dPitch = rad2deg(0); % [rad] Canard Deflection
+    % canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
+
+    if(t >= 4 && t <= 8)
+        canardInput.d1 = deg2rad(0);
         canardInput.d2 = deg2rad(0);
-        canardInput.d3 = deg2rad(4);
+        canardInput.d3 = deg2rad(0);
         canardInput.d4 = deg2rad(0);
     else
         canardInput.d1 = deg2rad(0);
@@ -168,27 +145,65 @@ while(currLLA(3) >= 0)
         canardInput.d4 = deg2rad(0);
     end
 
-    k1 = time.dt * MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-    k2 = time.dt * MissileDynamicModel(x_t + (1/2)*k1, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-    k3 = time.dt * MissileDynamicModel(x_t + (1/2)*k2, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-    k4 = time.dt * MissileDynamicModel(x_t + k3, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+    % Define the anonymous function for ode45 that captures the inputs
+    missileModelODE = @(t, x_t) MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
 
-    x_t = x_t + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+    % Call ode45 for a small time step from current t to t + dt
+    [t_out, x_out] = ode78(missileModelODE, [t, t + time.dt], x_t, options);
 
-    % straight line
-    k1_target = time.dt * TargetDynamicModel(x_t_target, t);
-    k2_target = time.dt * TargetDynamicModel(x_t_target + (1/2)*k1_target, t);
-    k3_target = time.dt * TargetDynamicModel(x_t_target + (1/2)*k2_target, t);
-    k4_target = time.dt * TargetDynamicModel(x_t_target + k3_target, t);
+    % Update time and state variables with the last output from ode45
+    t = t_out(end);
+    x_t = x_out(end, :)';  % Transpose to maintain consistency with your original state vector format
 
-    x_t_target = x_t_target + (1/5)*k1_target + (1/3)*k2_target + (1/3)*k3_target + (1/6)*k4_target;
-
+    % Convert ECEF position to LLA for altitude check
     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
 
+    % Record the results for future analysis
     xRecord(:, colNum) = x_t;
-    xRecord_target(:, colNum) = x_t_target;
     tRecord(1, colNum) = t;
 end
+
+colNum = 1;
+% while(t <= time.tf)
+% while(currLLA(3) >= -5)
+%     colNum = colNum + 1;
+% 
+%     t = t + time.dt;
+%     if(t >= 4 && t <= 8)
+%         % canardInput.dPitch = deg2rad(15); % [rad] Canard Deflection
+%         % canardInput.dYaw   = deg2rad(0); % [rad] Canard Deflection
+%         canardInput.d1 = deg2rad(0);
+%         canardInput.d2 = deg2rad(0);
+%         canardInput.d3 = deg2rad(0);
+%         canardInput.d4 = deg2rad(0);
+%     else
+%         canardInput.d1 = deg2rad(0);
+%         canardInput.d2 = deg2rad(0);
+%         canardInput.d3 = deg2rad(0);
+%         canardInput.d4 = deg2rad(0);
+%     end
+% 
+%     k1 = time.dt * MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+%     k2 = time.dt * MissileDynamicModel(x_t + (1/2)*k1, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+%     k3 = time.dt * MissileDynamicModel(x_t + (1/2)*k2, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+%     k4 = time.dt * MissileDynamicModel(x_t + k3, t, canardInput, AeroModel, MotorModel, const, kins, inds);
+% 
+%     x_t = x_t + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+% 
+%     % straight line
+%     k1_target = time.dt * TargetDynamicModel(x_t_target, t);
+%     k2_target = time.dt * TargetDynamicModel(x_t_target + (1/2)*k1_target, t);
+%     k3_target = time.dt * TargetDynamicModel(x_t_target + (1/2)*k2_target, t);
+%     k4_target = time.dt * TargetDynamicModel(x_t_target + k3_target, t);
+% 
+%     x_t_target = x_t_target + (1/5)*k1_target + (1/3)*k2_target + (1/3)*k3_target + (1/6)*k4_target;
+% 
+%     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
+% 
+%     xRecord(:, colNum) = x_t;
+%     xRecord_target(:, colNum) = x_t_target;
+%     tRecord(1, colNum) = t;
+% end
 
 %% Plot Vehicle Trajectory
 lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
@@ -232,10 +247,21 @@ hold off;
 title("Angular Velocity");
 legend('P', 'Q', 'R');
 
+%% Vehicle State
+
 figure('Name', 'Altitude');
 plot(tRecord(:), lla(:,3))
 title("Altitude Vs. Time");
 ylabel("Altitude (m)");
+xlabel("Time (s)");
+grid on;
+
+velocityHist = vecnorm(xRecord(inds.vel, :));
+
+figure('Name', 'Velocity');
+plot(tRecord(:), velocityHist);
+title('Velocity Vs. Time');
+ylabel("Velocity (m/s)");
 xlabel("Time (s)");
 grid on;
 

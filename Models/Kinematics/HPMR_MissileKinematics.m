@@ -5,11 +5,13 @@ kins.I_x = 5;
 kins.I_y = 26;
 kins.I_z = 26;
 kins.I = diag([kins.I_x, kins.I_y, kins.I_z]);
-kins.S = 8.17e-3; % [m^2] Missile Frontal Reference Area
+kins.diameter = 4 / 39.37; % [m] Diameter
+kins.S = pi * (kins.diameter^2 / 4);
+% kins.S = 8.17e-3; % [m^2] Missile Frontal Reference Area
 kins.len = 2.5; % [m] Missile Length
 
 % Mass Properties
-kins.m_i = 30.028; % [kg] Initial Mass
+% kins.m_i = 30.028; % [kg] Initial Mass
 kins.m_0 = 13.245; % [kg] Dry Mass
 
 kins.canard.S = 0.1; % [m^2] Canard Surface Area
