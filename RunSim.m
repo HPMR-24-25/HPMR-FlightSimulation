@@ -134,10 +134,10 @@ while(currLLA(3) >= -5)
     % canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
 
     if(t >= 4 && t <= 8)
-        canardInput.d1 = deg2rad(0);
-        canardInput.d2 = deg2rad(0);
-        canardInput.d3 = deg2rad(0);
-        canardInput.d4 = deg2rad(0);
+        canardInput.d1 = deg2rad(5);
+        canardInput.d2 = deg2rad(5);
+        canardInput.d3 = deg2rad(5);
+        canardInput.d4 = deg2rad(5);
     else
         canardInput.d1 = deg2rad(0);
         canardInput.d2 = deg2rad(0);

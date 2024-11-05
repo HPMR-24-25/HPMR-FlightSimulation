@@ -28,7 +28,7 @@ function ModelData = initMissileAeroModel()
     % <<< Guesstimated Values >>>
 
     % Canard Lift Force Deflection Coefficient
-    ModelData.canard.CL_delta = 0.4;
+    ModelData.canard.CL_delta = 5.5;
 
     % Aerodynamic Restoring Moment Coefficients
     ModelData.damping.Cd_x = 0.3;
