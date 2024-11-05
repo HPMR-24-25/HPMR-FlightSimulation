@@ -105,8 +105,8 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     M_4_x = kins.canard.y_cp_24 * L_c_4;
 
     F_x_B = 0;
-    F_y_B = L_c_1 + L_c_3;
-    F_z_B = L_c_2 + L_c_4;
+    F_y_B = L_c_1 - L_c_3;
+    F_z_B = L_c_2 - L_c_4;
     F_c_B = [F_x_B; F_y_B; F_z_B];
 
     F_c_ECEF = R_EB * F_c_B;

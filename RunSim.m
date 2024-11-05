@@ -56,7 +56,7 @@ yaw_0 = deg2rad(80);
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
 
 %$ Angular Rate Initialization
-w_ib_x = 10.00; % [rad/s]
+w_ib_x = 0.00; % [rad/s]
 w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
 
@@ -106,7 +106,7 @@ x_0_target = [target_ECEF'; V_target_ECEF];
 x_t_target = x_0_target;
 x_t_targetCircle = x_t_target;
 
-%% RK4 Data Storage
+%% State Data Storage
 t = time.t0;
 
 numTimePts = time.tf / time.dt+1;
@@ -126,6 +126,12 @@ xRecord_targetCircle(:,1) = x_t_targetCircle;
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
+stateBuffer = nan(size(x_t, 1), 2);
+
+% Guidance Storage
+cmdHist = zeros(4, numTimePts);
+
+
 colNum = 1;
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
@@ -133,11 +139,29 @@ while(currLLA(3) >= -5)
     % canardInput.dPitch = rad2deg(0); % [rad] Canard Deflection
     % canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
 
+    % Update buffer with the latest state; shift older states
+    stateBuffer(:, 2) = stateBuffer(:, 1); % Move the second last state to the oldest slot
+    stateBuffer(:, 1) = x_t;               % Insert the current state
+
+    % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 8)
-        canardInput.d1 = deg2rad(5);
-        canardInput.d2 = deg2rad(5);
-        canardInput.d3 = deg2rad(5);
-        canardInput.d4 = deg2rad(5);
+
+        rollCmd = deg2rad(20);
+
+        canardInput = RollController_PID(stateBuffer, rollCmd, 5, 0, 0, time.dt);
+
+        % Make sure to not actuate more than 360 deg
+        canardInput.d1 = mod(canardInput.d1, 2*pi);
+        canardInput.d2 = mod(canardInput.d2, 2*pi);
+        canardInput.d3 = mod(canardInput.d3, 2*pi);
+        canardInput.d4 = mod(canardInput.d4, 2*pi);
+
+        cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
+
+        % canardInput.d1 = deg2rad(5);
+        % canardInput.d2 = deg2rad(5);
+        % canardInput.d3 = deg2rad(5);
+        % canardInput.d4 = deg2rad(5);
     else
         canardInput.d1 = deg2rad(0);
         canardInput.d2 = deg2rad(0);
@@ -264,6 +288,15 @@ title('Velocity Vs. Time');
 ylabel("Velocity (m/s)");
 xlabel("Time (s)");
 grid on;
+
+%% Canard Command History
+figure('Name', 'Canard Angles');
+plot(tRecord(:), rad2deg(cmdHist));
+title('Canard Actuation');
+ylabel("Actuation (deg)");
+xlabel("Time (s)");
+grid on;
+legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
 
 % figure('Name', 'Target Position');
 % subplot(3,1,1);
