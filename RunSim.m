@@ -13,7 +13,8 @@ kins = HPMR_ModelRocketKinematics();
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-AeroModel = initMissileAeroModel();
+% AeroModel = initMissileAeroModel();
+AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
@@ -126,43 +127,50 @@ xRecord_targetCircle(:,1) = x_t_targetCircle;
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
-stateBuffer = nan(size(x_t, 1), 2);
-
 % Guidance Storage
 cmdHist = zeros(4, numTimePts);
 
-
 colNum = 1;
+% Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
+stateBuffer = nan(size(x_t, 1), 2);
+prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
+maxActuationRate = 0.5; % rad/s
+
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
-    % canardInput.dPitch = rad2deg(0); % [rad] Canard Deflection
-    % canardInput.dYaw   = rad2deg(0); % [rad] Canard Deflection
-
     % Update buffer with the latest state; shift older states
-    stateBuffer(:, 2) = stateBuffer(:, 1); % Move the second last state to the oldest slot
-    stateBuffer(:, 1) = x_t;               % Insert the current state
+    stateBuffer(:, 2) = stateBuffer(:, 1);
+    stateBuffer(:, 1) = x_t;
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 8)
-
         rollCmd = deg2rad(20);
+        canardTargetInput = RollController_PID(stateBuffer, rollCmd, 1, 0, 0, time.dt);
 
-        canardInput = RollController_PID(stateBuffer, rollCmd, 5, 0, 0, time.dt);
+        % Ensure canard commands do not exceed 360 degrees
+        canardTargetInput.d1 = mod(canardTargetInput.d1, 2*pi);
+        canardTargetInput.d2 = mod(canardTargetInput.d2, 2*pi);
+        canardTargetInput.d3 = mod(canardTargetInput.d3, 2*pi);
+        canardTargetInput.d4 = mod(canardTargetInput.d4, 2*pi);
 
-        % Make sure to not actuate more than 360 deg
-        canardInput.d1 = mod(canardInput.d1, 2*pi);
-        canardInput.d2 = mod(canardInput.d2, 2*pi);
-        canardInput.d3 = mod(canardInput.d3, 2*pi);
-        canardInput.d4 = mod(canardInput.d4, 2*pi);
+        % Simulate actuation speed limitation for each canard
+        canardInput.d1 = prevCanardInput.d1 + sign(canardTargetInput.d1 - prevCanardInput.d1) * ...
+                         min(maxActuationRate * time.dt, abs(canardTargetInput.d1 - prevCanardInput.d1));
+        canardInput.d2 = prevCanardInput.d2 + sign(canardTargetInput.d2 - prevCanardInput.d2) * ...
+                         min(maxActuationRate * time.dt, abs(canardTargetInput.d2 - prevCanardInput.d2));
+        canardInput.d3 = prevCanardInput.d3 + sign(canardTargetInput.d3 - prevCanardInput.d3) * ...
+                         min(maxActuationRate * time.dt, abs(canardTargetInput.d3 - prevCanardInput.d3));
+        canardInput.d4 = prevCanardInput.d4 + sign(canardTargetInput.d4 - prevCanardInput.d4) * ...
+                         min(maxActuationRate * time.dt, abs(canardTargetInput.d4 - prevCanardInput.d4));
 
+        % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
 
-        % canardInput.d1 = deg2rad(5);
-        % canardInput.d2 = deg2rad(5);
-        % canardInput.d3 = deg2rad(5);
-        % canardInput.d4 = deg2rad(5);
+        % Update previous canard input state for next iteration
+        prevCanardInput = canardInput;
     else
+        % No roll control, reset canards to 0 rad
         canardInput.d1 = deg2rad(0);
         canardInput.d2 = deg2rad(0);
         canardInput.d3 = deg2rad(0);
