@@ -1,20 +1,30 @@
-function kins = HPMR_MissileKinematics()
+function kins = HPMR_ModelRocketKinematics()
 
-kins.x_cp = -0.1778; % [m] Longitudinal center of pressure distance
-kins.I_x = 5;
-kins.I_y = 26;
-kins.I_z = 26;
+kins.x_cp = 9 / 39.37; % [m] Longitudinal center of pressure distance
+kins.I_x = 0.044;  % [kg/m^2]
+kins.I_y = 11.834; % [kg/m^2]
+kins.I_z = 11.834; % [kg/m^2]
 kins.I = diag([kins.I_x, kins.I_y, kins.I_z]);
-kins.diameter = 4 / 39.37; % [m] Diameter
+kins.diameter = 4 / 39.37; % [m] Diameter (in -> m)
 kins.S = pi * (kins.diameter^2 / 4);
-% kins.S = 8.17e-3; % [m^2] Missile Frontal Reference Area
-kins.len = 2.5; % [m] Missile Length
+kins.len = 98 / 39.37; % [m] Missile Length (in -> m)
 
 % Mass Properties
-% kins.m_i = 30.028; % [kg] Initial Mass
-kins.m_0 = 13.245; % [kg] Dry Mass
+kins.m_0 = 471 / 35.274; % [kg] Dry Mass (oz -> kg)
 
-kins.canard.S = 0.1; % [m^2] Canard Surface Area
-kins.canard.x_cp = 1; % [m] Distance from CM to canard CP
+% Canard Properties
+canard.rootChord = 4.5 / 39.37; % [m] (in -> m)
+canard.tipChord  = 0.5 / 39.37; % [m] (in -> m)
+canard.height    = 3   / 39.37; % [m] (in -> m)
+canard.S         = (canard.rootChord + canard.tipChord / 2) * canard.height;
+canard.x_cp      = 27 / 39.37; % [m] (in -> m)
+canard.y_cp_13   = 0;
+canard.z_cp_13   = canard.height / 2;
+canard.y_cp_24   = canard.height / 2;
+canard.z_cp_13   = 0;
+canard.maxActuationRate = 0.2; % [rad/s]
+canard.maxActuation     = deg2rad(10); % [deg]
+
+kins.canard = canard;
 
 end

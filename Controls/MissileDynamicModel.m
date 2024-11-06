@@ -107,16 +107,16 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     F_x_B = 0;
     F_y_B = L_c_1 + L_c_3;
     F_z_B = L_c_2 + L_c_4;
-    F_c_B = [F_x_B; F_y_B; F_z_B]
+    F_c_B = [F_x_B; F_y_B; F_z_B];
 
     F_c_ECEF = R_EB * F_c_B;
 
     %% Damping Moments
     % Damping moments (proportional to angular velocities)
     %% I*omega_ib_dot + omega_ib x I = Sum_Moments
-    M_damp_x = -AeroModel.damping.Cd_x * q_inf * kins.S * kins.len * x(inds.w_ib_x);
-    M_damp_y = -AeroModel.damping.Cd_y * q_inf * kins.S * kins.len * x(inds.w_ib_y);
-    M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.len * x(inds.w_ib_z);
+    M_damp_x = -AeroModel.damping.Cd_x * q_inf * kins.S * kins.x_cp * x(inds.w_ib_x);
+    M_damp_y = -AeroModel.damping.Cd_y * q_inf * kins.S * kins.x_cp * x(inds.w_ib_y);
+    M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
     M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x;       % Roll moment with damping

@@ -6,15 +6,15 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-% kins = HPMR_MissileKinematics();
-kins = HPMR_ModelRocketKinematics();
+kins = HPMR_MissileKinematics();
+% kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-% AeroModel = initMissileAeroModel();
-AeroModel = initRocketAeroModel();
+AeroModel = initMissileAeroModel();
+% AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
@@ -51,8 +51,8 @@ target_ECEF = lla2ecef(targetLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(42);
-yaw_0 = deg2rad(80);
+pitch_0 = deg2rad(84);
+yaw_0 = deg2rad(0);
 
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
 
@@ -134,7 +134,6 @@ colNum = 1;
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
 stateBuffer = nan(size(x_t, 1), 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
-maxActuationRate = 0.5; % rad/s
 
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
@@ -145,26 +144,10 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 8)
-        rollCmd = deg2rad(15);
-        canardTargetInput = RollController_PID(stateBuffer, rollCmd, 1, 0, 0, time.dt);
+        rollCmd = deg2rad(10);
+        canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
 
-        % Ensure canard commands do not exceed 360 degrees
-        canardTargetInput.d1 = mod(canardTargetInput.d1, 2*pi);
-        canardTargetInput.d2 = mod(canardTargetInput.d2, 2*pi);
-        canardTargetInput.d3 = mod(canardTargetInput.d3, 2*pi);
-        canardTargetInput.d4 = mod(canardTargetInput.d4, 2*pi);
-
-        % Simulate actuation speed limitation for each canard
-        canardInput.d1 = prevCanardInput.d1 + sign(canardTargetInput.d1 - prevCanardInput.d1) * ...
-                         min(maxActuationRate * time.dt, abs(canardTargetInput.d1 - prevCanardInput.d1));
-        canardInput.d2 = prevCanardInput.d2 + sign(canardTargetInput.d2 - prevCanardInput.d2) * ...
-                         min(maxActuationRate * time.dt, abs(canardTargetInput.d2 - prevCanardInput.d2));
-        canardInput.d3 = prevCanardInput.d3 + sign(canardTargetInput.d3 - prevCanardInput.d3) * ...
-                         min(maxActuationRate * time.dt, abs(canardTargetInput.d3 - prevCanardInput.d3));
-        canardInput.d4 = prevCanardInput.d4 + sign(canardTargetInput.d4 - prevCanardInput.d4) * ...
-                         min(maxActuationRate * time.dt, abs(canardTargetInput.d4 - prevCanardInput.d4));
-
-        canardInput
+        canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -183,7 +166,7 @@ while(currLLA(3) >= -5)
     missileModelODE = @(t, x_t) MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
 
     % Call ode45 for a small time step from current t to t + dt
-    [t_out, x_out] = ode78(missileModelODE, [t, t + time.dt], x_t, options);
+    [t_out, x_out] = ode45(missileModelODE, [t, t + time.dt], x_t, options);
 
     % Update time and state variables with the last output from ode45
     t = t_out(end);
