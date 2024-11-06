@@ -145,7 +145,7 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 8)
-        rollCmd = deg2rad(20);
+        rollCmd = deg2rad(15);
         canardTargetInput = RollController_PID(stateBuffer, rollCmd, 1, 0, 0, time.dt);
 
         % Ensure canard commands do not exceed 360 degrees
@@ -163,6 +163,8 @@ while(currLLA(3) >= -5)
                          min(maxActuationRate * time.dt, abs(canardTargetInput.d3 - prevCanardInput.d3));
         canardInput.d4 = prevCanardInput.d4 + sign(canardTargetInput.d4 - prevCanardInput.d4) * ...
                          min(maxActuationRate * time.dt, abs(canardTargetInput.d4 - prevCanardInput.d4));
+
+        canardInput
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
