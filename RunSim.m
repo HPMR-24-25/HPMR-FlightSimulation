@@ -6,15 +6,15 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-kins = HPMR_MissileKinematics();
-% kins = HPMR_ModelRocketKinematics();
+% kins = HPMR_MissileKinematics();
+kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-AeroModel = initMissileAeroModel();
-% AeroModel = initRocketAeroModel();
+% AeroModel = initMissileAeroModel();
+AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
@@ -51,7 +51,7 @@ target_ECEF = lla2ecef(targetLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(84);
+pitch_0 = deg2rad(45);
 yaw_0 = deg2rad(0);
 
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
@@ -144,8 +144,9 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 8)
-        rollCmd = deg2rad(10);
-        canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
+        rollCmd = deg2rad(35);
+        % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
+        canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
 
         canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
 
