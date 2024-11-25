@@ -1,4 +1,4 @@
-function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, const, kins, inds)
+function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, const, kins, inds)
 %% MissileDynamicModel - Nonlinear dynamic model of missile
 % Returns the discrete state derivative of a generic missile model
 % Inputs:
@@ -159,8 +159,10 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
         -m_dot;
     ];
 
-    if(t >= 4 && t <= 8)
-        brk = 0;
-    end
+    accel_ecef = [
+        vx_dot;
+        vy_dot;
+        vz_dot;
+    ];
 
 end
