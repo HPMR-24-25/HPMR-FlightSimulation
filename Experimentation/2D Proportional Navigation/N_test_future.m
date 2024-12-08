@@ -1,6 +1,6 @@
 clear all; close all; clc
 global N m
-N = [0.5 1 2 3 4 5];
+N = [1 2 3 4 5];
 for m = 1:length(N)
 % time steup
 dt = 0.1;
@@ -80,6 +80,13 @@ ylim([0 12])
 % end
 end
 plot(xRecord(6,:), xRecord(7,:));
+Legend=cell(5,1);%  two positions 
+Legend{1}='N = 1' ;
+Legend{2}='N = 2';
+Legend{3}='N = 3';
+Legend{4}='N = 4';
+Legend{5}='N = 5';
+legend(Legend);
 %%
 % missile dynamic model
 function x_dot = MissileDynamicModel(x, t)

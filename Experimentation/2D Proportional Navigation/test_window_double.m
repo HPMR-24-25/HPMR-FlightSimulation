@@ -1,23 +1,23 @@
 clear all; close all; clc
 
 % time steup
-dt = 0.1;
-tspan = 0:dt:100;
+dt = 0.01;
+tspan = 0:dt:40;
 t0 = 0;
 t = t0;
 
 % initial missile conditions
 px = 0;
 py = 0;
-V = 1.2;
+V = 20;
 gamma = deg2rad(90);
 Vx = V*cos(gamma);
 Vy = V*sin(gamma);
 
 % initial target conditions
-px_t = 10;
-py_t = 10;
-V_t = 1;
+px_t = 20;
+py_t = 20;
+V_t = 18;
 theta = deg2rad(180);
 Vx_t = V*cos(theta);
 Vy_t = V*sin(theta);
@@ -77,6 +77,26 @@ for i = 1:length(tspan)
     tRecordF(1, colNum) = t;
 end
 
+% miss distance
+for i = 1:length(tRecord)
+%     missilepos(i) = sqrt(xRecord(1,i)^2+xRecord(2,i)^2);
+%     missileposF(i) = sqrt(xRecordF(1,i)^2+xRecordF(2,i)^2);
+%     targetpos(i) = sqrt(xRecord(6,i)^2+xRecord(7,i)^2);
+%     miss_dist(i) = abs(targetpos(i)-missilepos(i));
+%     miss_distF(i) = abs(targetpos(i)-missileposF(i));
+    LOS = [xRecord(1,i); xRecord(2,i)]-[xRecord(6,i); xRecord(7,i)];
+    LOSF = [xRecordF(1,i); xRecordF(2,i)]-[xRecord(6,i); xRecord(7,i)];
+    miss_dist(i) = abs(norm(LOS));
+    miss_distF(i) = abs(norm(LOSF));
+end
+
+figure;
+plot(tRecord,miss_dist)
+hold on
+plot(tRecord,miss_distF)
+legend('Non','F')
+hold off
+
 % plot
 figure;
 plot(xRecord(1,:), xRecord(2,:));
@@ -84,7 +104,7 @@ hold on
 plot(xRecord(6,:), xRecord(7,:));
 plot(xRecordF(1,:), xRecordF(2,:));
 %axis([-30 0 -1 5]);
-ylim([0 12])
+%ylim([0 12])
 
 % Initialize animated objects
 missilePlot = plot(xRecord(1,1), xRecord(2,1), 'ro', 'MarkerSize', 8, 'DisplayName', 'Missile');
@@ -97,8 +117,9 @@ for i = 1:numTimePts
     set(missilePlot, 'XData', xRecord(1,i), 'YData', xRecord(2,i));
     set(targetPlot, 'XData', xRecord(6,i), 'YData', xRecord(7,i));
     set(missilePlotF, 'XData', xRecordF(1,i), 'YData', xRecordF(2,i));
-    pause(0.001); % Adjust to control animation speed
+    pause(0.000000001); % Adjust to control animation speed
 end
+
 
 %%
 % missile dynamic model
@@ -228,7 +249,7 @@ function x_dot = MissileDynamicModelF(x, t)
     py_t_dot = V_t*sin(theta);
     Vx_t_dot = -V_t * sin(theta) * 0;
     Vy_t_dot = V_t * cos(theta) * 0;
-    theta_dot = 0;    
+    theta_dot = 0;
 
     % Combine derivatives into x_dot
     x_dot = [px_dot; py_dot; Vx_dot; Vy_dot; gamma_dot; px_t_dot; py_t_dot; Vx_t_dot; Vy_t_dot; theta_dot];
