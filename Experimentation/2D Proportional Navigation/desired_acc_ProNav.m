@@ -17,12 +17,15 @@ vid_file = 'off';
 %PN_type = 'Pure';
 PN_type = 'True';
 
+% gravity
+g = 32;
+
 % ProNav & Engagement Parameters
-aT = 0;
+aT = 2*g;
 HE_rad = -20*pi/180;
 Np = 3;
 tf = 12;
-h = 1e-2;
+h = 1e-3;
 
 % Engagement Initial Conditions
 beta_rad = pi;

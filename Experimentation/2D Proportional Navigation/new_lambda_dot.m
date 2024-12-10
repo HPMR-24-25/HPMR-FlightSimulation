@@ -1,7 +1,7 @@
 clear all; close all; clc
 
 % time steup
-dt = 1e-2;
+dt = 1e-3;  % use to increase accuracy
 tf = 12;
 t = 0:dt:tf-dt;
 nt = length(t);
@@ -13,7 +13,7 @@ N = 3;
 g = 32; % ft/s^2
 
 % initial missile conditions
-aT = 0*g;
+aT = -2*g;
 Vp = 3000;
 HE = -20*pi/180;
 Rpx_i = 0;
@@ -84,36 +84,22 @@ Vp_mag = sqrt(xRecord(8,:).^2 + xRecord(9,:).^2);
 
 
 figure(1)
-semilogy(t,Rtp)
+semilogy(t,Rtp,'linewidth', 2)
+title('Miss Distance')
+xlabel('Time (s)')
+ylabel('Miss Distance (ft)')
 
 % plot
 figure(2)
-plot(xRecord(4,1:miss_index), xRecord(5,1:miss_index));
+plot(xRecord(4,1:miss_index), xRecord(5,1:miss_index),'linewidth', 2);
 hold on
-plot(xRecord(2,1:miss_index), xRecord(3,1:miss_index));
+plot(xRecord(2,1:miss_index), xRecord(3,1:miss_index),'linewidth', 2);
+title('Pursuer and Target')
+legend('Pursuer','Target')
+xlim([-1000, 41000])
+ylim([8000, 13600])
+grid on
 hold off
-% xlim([-400, 30000])
-% ylim([-4000, 4000])
-%axis([-30 0 -1 5]);
-%ylim([0 12])
-
-% figure;
-% plot(x(:,4), x(:,5));
-% hold on
-% plot(x(:,2), x(:,3));
-
-% % Initialize animated objects
-% missilePlot = plot(xRecord(4,1), xRecord(5,1), 'ro', 'MarkerSize', 8, 'DisplayName', 'Missile');
-% targetPlot = plot(xRecord(2,1), xRecord(3,1), 'bo', 'MarkerSize', 8, 'DisplayName', 'Target');
-% legend('Location','southwest');
-% 
-% % Animate
-% for i = 1:numTimePts
-%     set(missilePlot, 'XData', xRecord(4,i), 'YData', xRecord(5,i));
-%     set(targetPlot, 'XData', xRecord(2,i), 'YData', xRecord(3,i));
-%     pause(0.000001); % Adjust to control animation speed
-% end
-
 
 % Number of time steps per plot time step%%%%%%%%%%%%%%(why)%%%%%%%
 dt_index = 0.1/dt;
