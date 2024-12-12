@@ -13,8 +13,8 @@ N = 3;
 g = 32; % ft/s^2
 
 % initial missile conditions
-aT = -2*g;
-Vp = 1000;
+aT = 3*g;
+Vp = 800;
 HE = -20*pi/180;
 Rpx_i = 0;
 Rpz_i = 10000;
@@ -336,11 +336,11 @@ function dx = ZEMDynamicModel(t, x, N, aT)
     Vtpx_i = Vtp_i(1);
     Vtpz_i = Vtp_i(2);
 
-    % time to go
-    t_go = norm(Rtp_i)/Vp;
-
     % Closing Velocity
     Vc = -(Rtpx_i*Vtpx_i+Rtpz_i*Vtpz_i)/norm(Rtp_i);
+
+    % time to go
+    t_go = norm(Rtp_i)/Vc;
 
     % line of sight angle and rate
     lambda = atan2(Rtpz_i,Rtpx_i);
@@ -376,4 +376,5 @@ function dx = ZEMDynamicModel(t, x, N, aT)
 
     % state derivative
     dx = [dB; dRtx_i; dRtz_i; dRpx_i; dRpz_i; dVtx_i; dVtz_i; dVpx_i; dVpz_i];
+
 end

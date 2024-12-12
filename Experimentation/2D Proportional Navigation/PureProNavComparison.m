@@ -13,7 +13,7 @@ N = 3;
 g = 32; % ft/s^2
 
 % initial missile conditions
-aT = -3*g;
+aT = -2*g;
 Vp = 800;
 HE = -20*pi/180;
 Rpx_i = 0;
@@ -212,6 +212,7 @@ function dx = MissileDynamicModel(t, x, N, aT)
 
     % target velocity magnitude
     Vt = sqrt(Vtx_i^2+Vtz_i^2);
+    Vp = sqrt(Vpx_i^2+Vpz_i^2);
 
     % relative position and velocity
     Rtp_i = [Rtx_i; Rtz_i]-[Rpx_i; Rpz_i];
@@ -228,14 +229,17 @@ function dx = MissileDynamicModel(t, x, N, aT)
     lambda = atan2(Rtpz_i,Rtpx_i);
     dlambda = (Rtpx_i*Vtpz_i-Rtpz_i*Vtpx_i)/(norm(Rtp_i)^2);
 
+    % Heading Error
+    HE = atan2(Vpz_i,Vpx_i);
+
     % true ProNav
-    ap_true = N*Vc*dlambda;
+    ap_pure = N*Vp*dlambda;
 
     % missile derivatives
     dRpx_i = Vpx_i;
     dRpz_i = Vpz_i;
-    dVpx_i = ap_true*sin(lambda);
-    dVpz_i = ap_true*cos(lambda);
+    dVpx_i = ap_pure*sin(HE);
+    dVpz_i = ap_pure*cos(HE);
 
     % target derivatives
     dB = aT/Vt;
@@ -295,14 +299,17 @@ function dx = FutureDynamicModel(t, x, N, aT)
     lambda = atan2(fRtpz_i,fRtpx_i);
     dlambda = (fRtpx_i*Vtpz_i-fRtpz_i*Vtpx_i)/(fRtp^2);
 
+    % Heading Error
+    HE = atan2(Vpz_i,Vpx_i);
+
     % true ProNav
-    ap_true = N*fVc*dlambda;
+    ap_pure = N*Vp*dlambda;
 
     % missile derivatives
     dRpx_i = Vpx_i;
     dRpz_i = Vpz_i;
-    dVpx_i = ap_true*sin(lambda);
-    dVpz_i = ap_true*cos(lambda);
+    dVpx_i = ap_pure*sin(HE);
+    dVpz_i = ap_pure*cos(HE);
 
     % target derivatives
     dB = aT/Vt;
@@ -327,29 +334,29 @@ function dx = ZEMDynamicModel(t, x, N, aT)
     % target and pursuer velocity magnitude
     Vt = sqrt(Vtx_i^2+Vtz_i^2);
     Vp = sqrt(Vpx_i^2+Vpz_i^2);
-
+    
     % relative position and velocity
     Rtp_i = [Rtx_i; Rtz_i]-[Rpx_i; Rpz_i];
     Rtpx_i = Rtp_i(1);
     Rtpz_i = Rtp_i(2);
+    Rtp = sqrt(Rtpx_i^2+Rtpz_i^2);
     Vtp_i = [Vtx_i; Vtz_i]-[Vpx_i; Vpz_i];
     Vtpx_i = Vtp_i(1);
     Vtpz_i = Vtp_i(2);
 
-    % time to go
-    t_go = norm(Rtp_i)/Vp;
-
     % Closing Velocity
     Vc = -(Rtpx_i*Vtpx_i+Rtpz_i*Vtpz_i)/norm(Rtp_i);
 
-    % line of sight angle and rate
-    lambda = atan2(Rtpz_i,Rtpx_i);
-    dlambda = (Rtpx_i*Vtpz_i-Rtpz_i*Vtpx_i)/(norm(Rtp_i)^2);
+    % time to go
+    t_go = norm(Rtp_i)/Vc;
 
     % zero effort miss inertial frame
     ZEMx_i = Rtpx_i+Vtpx_i*t_go;
     ZEMz_i = Rtpz_i+Vtpz_i*t_go;
     ZEM_i = [ZEMx_i; ZEMz_i];
+
+    % line of sight angle
+    lambda = atan2(Rtpz_i,Rtpx_i);
 
     % zero effort miss LOS frame
     Cli = [cos(lambda), sin(lambda); -sin(lambda), cos(lambda)];
@@ -357,15 +364,21 @@ function dx = ZEMDynamicModel(t, x, N, aT)
     ZEMx_l = ZEM_l(1);
     ZEMz_l = ZEM_l(2);
 
-    % true ProNav
+    % line of sight angle rate
     ZEMplos = ZEMz_l;
-    ap_true = N*ZEMplos/(t_go^2);
+    dlambda = ZEMplos/(t_go*Rtp);
+
+    % Heading Error
+    HE = atan2(Vpz_i,Vpx_i);
+
+    % true ProNav
+    ap_pure = N*Vp*dlambda;
 
     % missile derivatives
     dRpx_i = Vpx_i;
     dRpz_i = Vpz_i;
-    dVpx_i = ap_true*sin(lambda);
-    dVpz_i = ap_true*cos(lambda);
+    dVpx_i = ap_pure*sin(HE);
+    dVpz_i = ap_pure*cos(HE);
 
     % target derivatives
     dB = aT/Vt;
