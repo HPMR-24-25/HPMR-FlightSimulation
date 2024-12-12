@@ -14,7 +14,7 @@ g = 32; % ft/s^2
 
 % initial missile conditions
 aT = -2*g;
-Vp = 800;
+Vp = 1000;
 HE = -20*pi/180;
 Rpx_i = 0;
 Rpz_i = 10000;
