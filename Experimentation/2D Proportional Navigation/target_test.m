@@ -13,7 +13,7 @@ N = 3;
 g = 32; % ft/s^2
 
 % initial missile conditions
-aT = 0*g;
+aT = -2*g;
 Vp = 800;
 HE = -20*pi/180;
 Rpx_i = 0;
@@ -267,8 +267,16 @@ function dx = FutureDynamicModel(t, x, N, aT)
     Rtpz_i = Rtp_i(2);
     Rtp = sqrt(Rtpx_i^2+Rtpz_i^2);
 
+    % relative velocity
+    Vtp_i = [Vtx_i; Vtz_i]-[Vpx_i; Vpz_i];
+    Vtpx_i = Vtp_i(1);
+    Vtpz_i = Vtp_i(2);
+
+    % Closing Velocity
+    Vc = -(Rtpx_i*Vtpx_i+Rtpz_i*Vtpz_i)/norm(Rtp_i);
+
     % time to go
-    t_go = Rtp/Vp;
+    t_go = Rtp/Vc;
 
     % future target position
     fRtx_i = Vtx_i*t_go+Rtx_i;
@@ -280,20 +288,15 @@ function dx = FutureDynamicModel(t, x, N, aT)
     fRtpz_i = fRtp_i(2);
     fRtp = sqrt(fRtpx_i^2+fRtpz_i^2);
 
-    % relative velocity
-    Vtp_i = [Vtx_i; Vtz_i]-[Vpx_i; Vpz_i];
-    Vtpx_i = Vtp_i(1);
-    Vtpz_i = Vtp_i(2);
-
     % Closing Velocity
-    Vc = -(fRtpx_i*Vtpx_i+fRtpz_i*Vtpz_i)/fRtp;
+    fVc = -(fRtpx_i*Vtpx_i+fRtpz_i*Vtpz_i)/fRtp;
 
     % line of sight angle and rate
     lambda = atan2(fRtpz_i,fRtpx_i);
     dlambda = (fRtpx_i*Vtpz_i-fRtpz_i*Vtpx_i)/(fRtp^2);
 
     % true ProNav
-    ap_true = N*Vc*dlambda;
+    ap_true = N*fVc*dlambda;
 
     % missile derivatives
     dRpx_i = Vpx_i;
