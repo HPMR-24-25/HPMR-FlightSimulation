@@ -89,7 +89,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     %% Canard Forces and Moments
     % Canard-induced lift forces and moments
-    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1;
+    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1; 
     L_c_2 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d2;
     L_c_3 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d3;
     L_c_4 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d4;
