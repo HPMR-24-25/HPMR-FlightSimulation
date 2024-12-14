@@ -13,7 +13,7 @@ N = 3;
 g = 32; % ft/s^2
 
 % initial missile conditions
-aT = 0*g;
+aT = -3*g;
 Vp = 2000;
 HE = -20*pi/180;
 Rpx_i = 0;
@@ -145,7 +145,7 @@ subplot(4,1,1)
 plot(xRec_TPN(4,1:midx_TPN), xRec_TPN(5,1:midx_TPN),'linewidth', 2);
 hold on
 plot(xRec_TPN(2,1:midx_TPN), xRec_TPN(3,1:midx_TPN),'linewidth', 2);
-title('True ProNav', 'Miss Distance = ' + string(mdist_TPN))
+title('True ProNav', 'Miss Distance = ' + string(mdist_TPN) + ' ft')
 legend('Pursuer','Target')
 grid on
 hold off
@@ -154,7 +154,7 @@ subplot(4,1,2)
 plot(xRec_FTPN(4,1:midx_FTPN), xRec_FTPN(5,1:midx_FTPN),'linewidth', 2);
 hold on
 plot(xRec_FTPN(2,1:midx_FTPN), xRec_FTPN(3,1:midx_FTPN),'linewidth', 2);
-title('Future State Estimation True ProNav', 'Miss Distance = ' + string(mdist_FTPN))
+title('Target Leading True ProNav', 'Miss Distance = ' + string(mdist_FTPN) + ' ft')
 legend('Pursuer','Target')
 grid on
 hold off
@@ -163,7 +163,7 @@ subplot(4,1,3)
 plot(xRec_PPN(4,1:midx_PPN), xRec_PPN(5,1:midx_PPN),'linewidth', 2);
 hold on
 plot(xRec_PPN(2,1:midx_PPN), xRec_PPN(3,1:midx_PPN),'linewidth', 2);
-title('Pure ProNav', 'Miss Distance = ' + string(mdist_PPN))
+title('Pure ProNav', 'Miss Distance = ' + string(mdist_PPN) + ' ft')
 legend('Pursuer','Target')
 grid on
 hold off
@@ -172,7 +172,7 @@ subplot(4,1,4)
 plot(xRec_FPPN(4,1:midx_FPPN), xRec_FPPN(5,1:midx_FPPN),'linewidth', 2);
 hold on
 plot(xRec_FPPN(2,1:midx_FPPN), xRec_PPN(3,1:midx_FPPN),'linewidth', 2);
-title('Future State Estimation Pure ProNav', 'Miss Distance = ' + string(mdist_FPPN))
+title('Target Leading Pure ProNav', 'Miss Distance = ' + string(mdist_FPPN) + ' ft')
 legend('Pursuer','Target')
 grid on
 hold off

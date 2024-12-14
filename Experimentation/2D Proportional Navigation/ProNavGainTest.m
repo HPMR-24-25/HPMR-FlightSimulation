@@ -8,7 +8,7 @@ nt = length(t);
 
 % gravity
 g = 32; % ft/s^2
-aT = -1.5*g;
+aT = 0.75*g;
 
 % gain
 N = 1:0.1:5;
