@@ -1,6 +1,6 @@
 %% WPI High Power Rocket MQP - Flight Simulator
 % Author: Daniel Pearson (djpearson@wpi.edu)
-% Version: 9.29.2024
+% Version: 12.15.2024
 
 clear variables; close all; clc;
 
@@ -18,6 +18,8 @@ AeroModel = initMissileAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
+
+ImuModel = getASM330Params();
 
 %% Simulator Config **FOR SIMULINK USE LATER**
 % Time Configuration
@@ -129,11 +131,19 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
 % Guidance Storage
 cmdHist = zeros(4, numTimePts);
-
-colNum = 1;
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
 stateBuffer = nan(size(x_t, 1), 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
+
+%% Fill steady state data for set period of time (Simulate Launcher)
+steadyStateDuration = 5; % [s]
+numSteadyPts = steadyStateDuration / time.dt;
+
+% Pre-Fill steady state values
+tRecord(1:numSteadyPts) = linspace(-steadyStateDuration+time.dt, time.t0, numSteadyPts);
+xRecord(:, 1:numSteadyPts) = repmat(x_0, 1, numSteadyPts); % Repeat initial state
+cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
+colNum = numSteadyPts;
 
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
@@ -143,7 +153,7 @@ while(currLLA(3) >= -5)
     stateBuffer(:, 1) = x_t;
 
     % Attempt to control roll between 4s and 8s
-    if(t >= 4 && t <= 8)
+    if(t >= steadyStateDuration + 4 && t <= steadyStateDuration + 8)
         rollCmd = deg2rad(35);
         canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
@@ -179,49 +189,12 @@ while(currLLA(3) >= -5)
     % Record the results for future analysis
     xRecord(:, colNum) = x_t;
     tRecord(1, colNum) = t;
-end
 
-colNum = 1;
-% while(t <= time.tf)
-% while(currLLA(3) >= -5)
-%     colNum = colNum + 1;
-% 
-%     t = t + time.dt;
-%     if(t >= 4 && t <= 8)
-%         % canardInput.dPitch = deg2rad(15); % [rad] Canard Deflection
-%         % canardInput.dYaw   = deg2rad(0); % [rad] Canard Deflection
-%         canardInput.d1 = deg2rad(0);
-%         canardInput.d2 = deg2rad(0);
-%         canardInput.d3 = deg2rad(0);
-%         canardInput.d4 = deg2rad(0);
-%     else
-%         canardInput.d1 = deg2rad(0);
-%         canardInput.d2 = deg2rad(0);
-%         canardInput.d3 = deg2rad(0);
-%         canardInput.d4 = deg2rad(0);
-%     end
-% 
-%     k1 = time.dt * MissileDynamicModel(x_t, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-%     k2 = time.dt * MissileDynamicModel(x_t + (1/2)*k1, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-%     k3 = time.dt * MissileDynamicModel(x_t + (1/2)*k2, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-%     k4 = time.dt * MissileDynamicModel(x_t + k3, t, canardInput, AeroModel, MotorModel, const, kins, inds);
-% 
-%     x_t = x_t + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
-% 
-%     % straight line
-%     k1_target = time.dt * TargetDynamicModel(x_t_target, t);
-%     k2_target = time.dt * TargetDynamicModel(x_t_target + (1/2)*k1_target, t);
-%     k3_target = time.dt * TargetDynamicModel(x_t_target + (1/2)*k2_target, t);
-%     k4_target = time.dt * TargetDynamicModel(x_t_target + k3_target, t);
-% 
-%     x_t_target = x_t_target + (1/5)*k1_target + (1/3)*k2_target + (1/3)*k3_target + (1/6)*k4_target;
-% 
-%     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
-% 
-%     xRecord(:, colNum) = x_t;
-%     xRecord_target(:, colNum) = x_t_target;
-%     tRecord(1, colNum) = t;
-% end
+    % Extract Acceleration Readings
+    [~, accel_ecef] = MissileDynamicModel(x_out(end, :)', t, canardInput, AeroModel, MotorModel, const, kins, inds);
+
+    sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
+end
 
 %% Plot Vehicle Trajectory
 lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
@@ -281,6 +254,15 @@ plot(tRecord(:), velocityHist);
 title('Velocity Vs. Time');
 ylabel("Velocity (m/s)");
 xlabel("Time (s)");
+grid on;
+
+% Altitude Vs Downrange
+downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
+figure('Name', 'Conops');
+plot(downrange, lla(:,3));
+title("Mission Conops");
+ylabel("Altitude (m)");
+xlabel("Downrange (m)");
 grid on;
 
 %% Canard Command History

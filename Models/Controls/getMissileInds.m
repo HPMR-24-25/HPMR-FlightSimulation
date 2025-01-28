@@ -21,6 +21,7 @@ function missileStateInds = getMissileInds()
     missileStateInds.w_ib_x = 11;
     missileStateInds.w_ib_y = 12;
     missileStateInds.w_ib_z = 13;
+    missileStateInds.w_ib = [missileStateInds.w_ib_x, missileStateInds.w_ib_y, missileStateInds.w_ib_z];
 
     missileStateInds.mass   = 14;
 

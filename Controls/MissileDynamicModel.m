@@ -1,4 +1,4 @@
-function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, const, kins, inds)
+function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, const, kins, inds)
 %% MissileDynamicModel - Nonlinear dynamic model of missile
 % Returns the discrete state derivative of a generic missile model
 % Inputs:
@@ -89,7 +89,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
 
     %% Canard Forces and Moments
     % Canard-induced lift forces and moments
-    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1;
+    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1; 
     L_c_2 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d2;
     L_c_3 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d3;
     L_c_4 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d4;
@@ -119,7 +119,7 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
-    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x;       % Roll moment with damping
+    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
     M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
     M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
 
@@ -159,8 +159,10 @@ function x_dot = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, c
         -m_dot;
     ];
 
-    if(t >= 4 && t <= 8)
-        brk = 0;
-    end
+    accel_ecef = [
+        vx_dot;
+        vy_dot;
+        vz_dot;
+    ];
 
 end
