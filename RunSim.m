@@ -1,6 +1,6 @@
 %% WPI High Power Rocket MQP - Flight Simulator
 % Author: Daniel Pearson (djpearson@wpi.edu)
-% Version: 9.29.2024
+% Version: 12.15.2024
 
 clear variables; close all; clc;
 
@@ -254,6 +254,15 @@ plot(tRecord(:), velocityHist);
 title('Velocity Vs. Time');
 ylabel("Velocity (m/s)");
 xlabel("Time (s)");
+grid on;
+
+% Altitude Vs Downrange
+downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
+figure('Name', 'Conops');
+plot(downrange, lla(:,3));
+title("Mission Conops");
+ylabel("Altitude (m)");
+xlabel("Downrange (m)");
 grid on;
 
 %% Canard Command History

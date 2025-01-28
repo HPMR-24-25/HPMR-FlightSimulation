@@ -119,7 +119,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
-    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x;       % Roll moment with damping
+    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
     M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
     M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
 
