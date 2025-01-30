@@ -90,7 +90,7 @@ function x_dot = MissileDynamicModel(x, t)
     theta = x(10);
 
     % Missile Velocity
-    V = sqrt(Vx^2+Vy^2)
+    V = sqrt(Vx^2+Vy^2);
 
     % Target Velocity
     V_t = sqrt(Vx_t^2+Vy_t^2);
