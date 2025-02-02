@@ -155,8 +155,10 @@ while(currLLA(3) >= -5)
     % Attempt to control roll between 4s and 8s
     if(t >= steadyStateDuration + 4 && t <= steadyStateDuration + 8)
         rollCmd = deg2rad(35);
+        Cmd = [rollCmd; 0; 0];
         canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
+        % canardTargetInput = Controller_Lyapunov(x_t, Cmd, 0.4, 0, 0, time.dt);
 
         canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
 
