@@ -1,4 +1,4 @@
-function Torques = Controller_Lyapunov(x, cmd, P, I, D, dt)
+function canardInput = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
 % Controller_Lyapunov - Lyapunov attitude controller
 % Roll controller using a P and D gains
 % Inputs:
@@ -10,22 +10,18 @@ function Torques = Controller_Lyapunov(x, cmd, P, I, D, dt)
 % Outputs:
 %   Torques - Three Canard Torques to achieve commanded attitude command
 
-%%
-% Original
-% q(1) = x(1);
-% q(2) = x(2);
-% q(3) = x(3);
-% q(4) = x(4);
+%% States
+q = [x(inds.qx); x(inds.qy); x(inds.qz); x(inds.qw)];
 
-% Swapped
-q = [x(2); x(3); x(4); x(1)];
+v = x(inds.vel);
 
-w = [x(11); x(12); x(13)];
+w = x(inds.w_ib);
 
 roll_cmd = cmd(1);
 pitch_cmd = cmd(2);
 yaw_cmd = cmd(3);
 
+%% Lyapunov
 % not sure if this function works for quaternion set up
 qc = eul2quat(roll_cmd, pitch_cmd, yaw_cmd)';
 
@@ -33,8 +29,40 @@ dq = Qmult(q,Qinv(qc));
 
 L = -P*sign(dq(4))*dq(1:3)-D*(1-dq(1:3)'*dq(1:3))*w;
 
-Torques = L;
+%% Torque to Canard Actuations
+% tranpose could be wrong here
+lla = ecef2lla(x(inds.pos)',"wgs84");
+alt = lla(3);
+AtmosphericModel(alt);
 
+d = kins.diameter;
+r = kins.x_cp;
+rho_inf = AtmosphericModel.rho_sl;
+v_inf = norm(v);
+S = kins.S;
+
+% Not sure if this is right, check notebook
+CL_delta = AeroModel.canard.CL_delta;
+% CL = CL_delta*qc;
+
+q_inf = 0.5*rho_inf*v_inf^2;
+
+H = CL_delta*q_inf*S;
+
+A = [d -d d -d;
+     r 0 -r 0;
+     0 -r 0 r];
+
+B = [L(1)/H; L(2)/H; L(3)/H];
+
+cmd = A\B;
+
+canardInput.d1 = cmd(1);
+canardInput.d2 = cmd(2);
+canardInput.d3 = cmd(3);
+canardInput.d4 = cmd(4);
+
+%% Functions
     function quadprod = Qmult(p, q)
         q13 = q(1:3);
         p13 = p(1:3);
