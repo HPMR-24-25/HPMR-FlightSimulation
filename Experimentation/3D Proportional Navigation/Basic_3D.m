@@ -18,7 +18,7 @@ Vp = 2000;
 HE = -20*pi/180;
 Rpx_i = 0;
 Rpy_i = 10000;
-Rpz_i = 1000;
+Rpz_i = 0;
 
 % initial target conditions
 Vt = 3400;
@@ -73,9 +73,10 @@ end
 % relative positions and velocities
 Rtpx = xRec(2,:) -  xRec(5,:);
 Rtpy = xRec(3,:) -  xRec(6,:);
+Rtpz = xRec(4,:) -  xRec(7,:);
 
 % range
-Rtp = sqrt(Rtpx.^2+Rtpy.^2);
+Rtp = sqrt(Rtpx.^2+Rtpy.^2+Rtpz.^2);
 
 % pursuer velocity
 Vp_mag = sqrt(xRec(8,:).^2 + xRec(9,:).^2);

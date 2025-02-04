@@ -48,6 +48,7 @@ Vpz_i = 0;
 % inputs for rk4
 
 % for missile
+% x_0 = [B; Rtx_i; Rty_i; Rpx_i; Rpy_i; Vtx_i; Vty_i; Vpx_i; Vpy_i];
 x_0 = [B; Rtx_i; Rty_i; Rtz_i; Rpx_i; Rpy_i; Rpz_i; Vtx_i; Vty_i; Vtz_i; Vpx_i; Vpy_i; Vpz_i];
 
 x = x_0;
@@ -94,55 +95,6 @@ legend('Pursuer','Target')
 grid on
 hold off
 
-%%
-% missile dynamic model
-% function dx = TrueProNav(t, x, N, aT)
-% 
-%     % Extract State Variables
-%     B = x(1); % target flight path angle
-%     Rtx_i = x(2); Rty_i = x(3); % target inertial position
-%     Rpx_i = x(4); Rpy_i = x(5); % missile inerital position
-%     Vtx_i = x(6); Vty_i = x(7); % target inertial velocity
-%     Vpx_i = x(8); Vpy_i = x(9); % missile inertial velocity
-% 
-%     % target velocity magnitude
-%     Vt = sqrt(Vtx_i^2+Vty_i^2);
-% 
-%     % relative position and velocity
-%     Rtp_i = [Rtx_i; Rty_i]-[Rpx_i; Rpy_i];
-%     Rtpx_i = Rtp_i(1);
-%     Rtpy_i = Rtp_i(2);
-%     Vtp_i = [Vtx_i; Vty_i]-[Vpx_i; Vpy_i];
-%     Vtpx_i = Vtp_i(1);
-%     Vtpy_i = Vtp_i(2);
-% 
-%     % Closing Velocity
-%     Vc = -(Rtpx_i*Vtpx_i+Rtpy_i*Vtpy_i)/norm(Rtp_i);
-% 
-%     % line of sight angle and rate
-%     lambda = atan2(Rtpy_i,Rtpx_i);
-%     dlambda = (Rtpx_i*Vtpy_i-Rtpy_i*Vtpx_i)/(norm(Rtp_i)^2);
-% 
-%     % true ProNav
-%     ap_true = N*Vc*dlambda;
-% 
-%     % missile derivatives
-%     dRpx_i = Vpx_i;
-%     dRpy_i = Vpy_i;
-%     dVpx_i = ap_true*sin(lambda);
-%     dVpy_i = ap_true*cos(lambda);
-% 
-%     % target derivatives
-%     dB = aT/Vt;
-%     dRtx_i = Vt*cos(B);
-%     dRty_i = Vt*sin(B);
-%     dVtx_i = aT * sin(B);
-%     dVty_i = aT * cos(B);
-% 
-%     % state derivative
-%     dx = [dB; dRtx_i; dRty_i; dRpx_i; dRpy_i; dVtx_i; dVty_i; dVpx_i; dVpy_i];
-% end
-
 % missile dynamic model
 function dx = TrueProNav(t, x, N, aT)
 
@@ -175,17 +127,34 @@ function dx = TrueProNav(t, x, N, aT)
     % time to go
     t_go = norm(Rtp_i)/Vc;
 
+    % future target position
+    fRtx_i = Vtx_i*t_go+Rtx_i;
+    fRty_i = Vty_i*t_go+Rty_i;
+    fRtz_i = Vtz_i*t_go+Rtz_i;
+
+    % future relative position
+    fRtp_i = [fRtx_i; fRty_i; fRtz_i]-[Rpx_i; Rpy_i; Rpz_i];
+
+    % Future LOS Unit Vector
+    fR_vec = fRtp_i/norm(fRtp_i);
+
+    % Future Closing Velocity
+    fVc = -dot(Vtp_i, fR_vec);
+
+    % Future time to go
+    ft_go = norm(fRtp_i)/fVc;
+
     % Zero Effort Miss
-    ZEM = Rtp_i + Vtp_i*t_go;
-    ZEMn = ZEM - dot(ZEM,R_vec)*R_vec;
+    ZEM = fRtp_i + Vtp_i*ft_go;
+    ZEMn = ZEM - dot(ZEM,fR_vec)*fR_vec;
 
     % missile derivatives
     dRpx_i = Vpx_i;
     dRpy_i = Vpy_i;
     dRpz_i = Vpz_i;
-    dVpx_i = N*ZEMn(1)/(t_go^2);
-    dVpy_i = N*ZEMn(2)/(t_go^2);
-    dVpz_i = N*ZEMn(3)/(t_go^2);
+    dVpx_i = N*ZEMn(1)/(ft_go^2);
+    dVpy_i = N*ZEMn(2)/(ft_go^2);
+    dVpz_i = N*ZEMn(3)/(ft_go^2);
 
     % target derivatives
     dB = aT/Vt;
