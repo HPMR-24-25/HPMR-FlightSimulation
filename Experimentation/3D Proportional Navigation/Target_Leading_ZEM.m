@@ -84,13 +84,14 @@ Vp_mag = sqrt(xRec(8,:).^2 + xRec(9,:).^2);
 % Time index of tf (time ot intercept)
 [mdist,midx] = min(abs(Rtp));
 
+
 % plot
 figure(1)
 % plot3(xRec(4,1:midx), xRec(5,1:midx), 0*(1:midx),'linewidth', 2);
 plot3(xRec(5,1:midx), xRec(6,1:midx), xRec(7,1:midx),'linewidth', 2);
 hold on
 plot3(xRec(2,1:midx), xRec(3,1:midx), xRec(4,1:midx),'linewidth', 2);
-title('True ProNav', 'Miss Distance = ' + string(mdist) + ' ft')
+title('Target Leading True ProNav', 'Miss Distance = ' + string(mdist) + ' ft')
 legend('Pursuer','Target')
 grid on
 hold off
@@ -110,13 +111,7 @@ function dx = TrueProNav(t, x, N, aT)
 
     % relative position and velocity
     Rtp_i = [Rtx_i; Rty_i; Rtz_i]-[Rpx_i; Rpy_i; Rpz_i];
-    Rtpx_i = Rtp_i(1);
-    Rtpy_i = Rtp_i(2);
-    Rtpz_i = Rtp_i(3);
     Vtp_i = [Vtx_i; Vty_i; Vtz_i]-[Vpx_i; Vpy_i; Vpz_i];
-    Vtpx_i = Vtp_i(1);
-    Vtpy_i = Vtp_i(2);
-    Vtpz_i = Vtp_i(3);
 
     % LOS Unit Vector
     R_vec = Rtp_i/norm(Rtp_i);
