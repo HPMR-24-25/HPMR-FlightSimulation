@@ -1,6 +1,6 @@
 function canardInput = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
 % Controller_Lyapunov - Lyapunov attitude controller
-% Roll controller using a P and D gains
+% Roll, Pitch, and Yaw controller using a P and D gains
 % Inputs:
 %   x - Current State
 %   cmd - [rad] Commanded Roll, Pitch, and Yaw
@@ -17,9 +17,6 @@ v = x(inds.vel);
 
 w = x(inds.w_ib);
 
-roll_cmd = cmd(1);
-pitch_cmd = cmd(2);
-yaw_cmd = cmd(3);
 
 %% Lyapunov
 % not sure if this function works for quaternion set up
