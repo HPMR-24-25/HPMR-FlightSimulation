@@ -1,11 +1,14 @@
-function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel, MotorModel, const, kins, inds)
-%% MissileDynamicModel - Nonlinear dynamic model of missile
+function [x_dot, accel_ecef] = RocketDynamicModel(x, t, AeroModel, MotorModel, const, kins, inds)
+%% RocketDynamicModel - Nonlinear dynamic model of missile
 % Returns the discrete state derivative of a generic missile model
 % Inputs:
 %   X - Current state of the vehicle
-     % [qw, qx, qy, qz, px, py, pz, vx, vy, vz, m]
-%   U - Control Inputs to the vehicle
+%   t - time
 %   AeroModel - Aerodynamic Model of the vehicle holding aerodynamic data
+%   MotorModel - Motor Model of the vehicle holding thrust data
+%   const - Global constants
+%   kins  - Vehicle kinematic constants
+%   inds  - Model indices
 
     %% Calculate LLA to get atmospheric quantities
 
@@ -48,7 +51,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
 
-    %% Missile Body Drag
+    %% Rocket Body Drag
 
     % Dynamic Pressure
     q_inf = 0.5 * rho_alt * (norm(v_ecef)^2);
@@ -63,7 +66,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     D_ECEF = R_EB * D_B;
 
-    %% Missile Body Lift
+    %% Rocket Body Lift
     % L_B = q_inf * AeroModel.ClLookup(M, AoA) * kins.S * cross(v_hat_B, [1; 0; 0]);
     L_B = [0; 0; 0];
 
@@ -87,30 +90,6 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
         a = 0;
     end
 
-    %% Canard Forces and Moments
-    % Canard-induced lift forces and moments
-    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1; 
-    L_c_2 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d2;
-    L_c_3 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d3;
-    L_c_4 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d4;
-
-    M_1_y = kins.canard.x_cp * L_c_1;
-    M_2_y = -kins.canard.x_cp * L_c_2;
-    M_3_z = kins.canard.x_cp * L_c_3;
-    M_4_z = -kins.canard.x_cp * L_c_4;
-
-    M_1_x = kins.canard.z_cp_13 * L_c_1;
-    M_2_x = kins.canard.y_cp_24 * L_c_2;
-    M_3_x = kins.canard.z_cp_13 * L_c_3;
-    M_4_x = kins.canard.y_cp_24 * L_c_4;
-
-    F_x_B = 0;
-    F_y_B = L_c_1 + L_c_3;
-    F_z_B = L_c_2 + L_c_4;
-    F_c_B = [F_x_B; F_y_B; F_z_B];
-
-    F_c_ECEF = R_EB * F_c_B;
-
     %% Damping Moments
     % Damping moments (proportional to angular velocities)
     %% I*omega_ib_dot + omega_ib x I = Sum_Moments
@@ -119,12 +98,9 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
-    % M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
-    % M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
-    % M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
-    M_x_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4) * kins.diameter + M_damp_x;
-    M_y_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3) * kins.canard.x_cp + M_damp_y;
-    M_z_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2) * kins.canard.x_cp + M_damp_z;
+    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
+    M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
+    M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
 
     %% Angular Accelerations
     dw_ib_x = M_x_b / kins.I_x;
