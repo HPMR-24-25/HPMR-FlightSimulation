@@ -23,7 +23,7 @@ yaw_cmd = cmd(3);
 
 %% Lyapunov
 % not sure if this function works for quaternion set up
-qc = eul2quat(roll_cmd, pitch_cmd, yaw_cmd)';
+qc = euler2quaternion(cmd);
 
 dq = Qmult(q,Qinv(qc));
 
@@ -86,4 +86,17 @@ canardInput.d4 = cmd(4);
 
         p = q_star/(q_mag^2);
     end
+
+    function quat = euler2quaternion(eul)
+        phi = eul(1)/2; %roll
+        theta = eul(2)/2; %pitch
+        psi = eul(3)/2; %yaw
+
+        quat = [sin(phi)*cos(theta)*cos(psi)+cos(phi)*sin(theta)*sin(psi);
+                 cos(phi)*sin(theta)*cos(psi)-sin(phi)*cos(theta)*sin(psi);
+                 cos(phi)*cos(theta)*sin(psi)+sin(phi)*sin(theta)*cos(psi);
+                 cos(phi)*cos(theta)*cos(psi)-sin(phi)*sin(theta)*sin(psi)];
+    end 
+
+
 end
