@@ -81,7 +81,7 @@ canardInput.d4 = cmd(4);
         q3 = q(3);
         q4 = q(4);
 
-        q_mag = q1^2+q2^2+q3^2+q4^2;
+        q_mag = norm(q);
         q_star = [-q1; -q2; -q3; q4];
 
         p = q_star/(q_mag^2);
@@ -93,9 +93,9 @@ canardInput.d4 = cmd(4);
         psi = eul(3)/2; %yaw
 
         quat = [sin(phi)*cos(theta)*cos(psi)+cos(phi)*sin(theta)*sin(psi);
-                 cos(phi)*sin(theta)*cos(psi)-sin(phi)*cos(theta)*sin(psi);
-                 cos(phi)*cos(theta)*sin(psi)+sin(phi)*sin(theta)*cos(psi);
-                 cos(phi)*cos(theta)*cos(psi)-sin(phi)*sin(theta)*sin(psi)];
+                cos(phi)*sin(theta)*cos(psi)-sin(phi)*cos(theta)*sin(psi);
+                cos(phi)*cos(theta)*sin(psi)+sin(phi)*sin(theta)*cos(psi);
+                cos(phi)*cos(theta)*cos(psi)-sin(phi)*sin(theta)*sin(psi)];
     end 
 
 
