@@ -1,4 +1,4 @@
-function canardInput = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
+function [canardInput, L] = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
 % Controller_Lyapunov - Lyapunov attitude controller
 % Roll controller using a P and D gains
 % Inputs:
@@ -25,9 +25,19 @@ yaw_cmd = cmd(3);
 % not sure if this function works for quaternion set up
 qc = euler2quaternion(cmd);
 
-dq = Qmult(q,Qinv(qc));
+qc_inv = [-qc(1); -qc(2); -qc(3); qc(4)];
 
-L = -P*sign(dq(4))*dq(1:3)-D*(1-dq(1:3)'*dq(1:3))*w;
+dq = [qc_inv(4) * q(1:3) + q(4) * qc_inv(1:3) - cross(q(1:3), qc_inv(1:3));
+    q(4)*qc_inv(4) - dot(q(1:3), qc_inv(1:3));
+];
+
+L = -P * sign(dq(4))*dq(1:3)-D*x(inds.w_ib);
+
+% dq_2 = Qmult(q,Qinv(qc))
+
+% L_1 = -P*sign(dq(4))*dq(1:3)-D*(1+dq(1:3)'*dq(1:3))*w
+% L_2 = -P*sign(dq(4))*dq(1:3)-D*(1-dq(1:3)'*dq(1:3))*w
+
 
 %% Torque to Canard Actuations
 % tranpose could be wrong here

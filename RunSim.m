@@ -131,6 +131,7 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
 % Guidance Storage
 cmdHist = zeros(4, numTimePts);
+torqueHist = zeros(3, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
 stateBuffer = nan(size(x_t, 1), 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
@@ -143,6 +144,7 @@ numSteadyPts = steadyStateDuration / time.dt;
 tRecord(1:numSteadyPts) = linspace(-steadyStateDuration+time.dt, time.t0, numSteadyPts);
 xRecord(:, 1:numSteadyPts) = repmat(x_0, 1, numSteadyPts); % Repeat initial state
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
+torqueHist(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 colNum = numSteadyPts;
 
 while(currLLA(3) >= -5)
@@ -153,18 +155,20 @@ while(currLLA(3) >= -5)
     stateBuffer(:, 1) = x_t;
 
     % Attempt to control roll between 4s and 8s
-    if(t >= steadyStateDuration + 4 && t <= steadyStateDuration + 8)
-        rollCmd = deg2rad(35);
-        pitchCmd = 0;
+    if(t >= 0 + 4 && t <= 0 + 12)
+        rollCmd = deg2rad(5);
+        pitchCmd = deg2rad(45);
         yawCmd = 0;
         Cmd = [rollCmd; pitchCmd; yawCmd];
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        canardTargetInput = Controller_Lyapunov(x_t, Cmd, 0.4, 0, 0, kins, inds, AeroModel, time.dt);
+        [canardTargetInput, L] = Controller_Lyapunov(x_t, Cmd, 0.05, 0, 0, kins, inds, AeroModel, time.dt);
         canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
+
+        torqueHist(:, colNum) = L;
 
         % Update previous canard input state for next iteration
         prevCanardInput = canardInput;
@@ -259,7 +263,7 @@ ylabel("Velocity (m/s)");
 xlabel("Time (s)");
 grid on;
 
-% Altitude Vs Downrange
+%% Altitude Vs Downrange
 downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
 figure('Name', 'Conops');
 plot(downrange, lla(:,3));
@@ -267,6 +271,25 @@ title("Mission Conops");
 ylabel("Altitude (m)");
 xlabel("Downrange (m)");
 grid on;
+
+%% Quaternion
+
+quaternionHist = xRecord(inds.q, :);
+figure('Name', 'Quaternion');
+plot(tRecord(:), quaternionHist);
+title('Quaternion Vs. Time');
+ylabel("Quaternion");
+xlabel("Time (s)");
+legend('q_w', 'q_i', 'q_j', 'q_k');
+
+%% Commanded Torques
+
+figure('Name', 'Commanded Torques');
+plot(tRecord(:), torqueHist');
+title('Commanded Torques');
+ylabel("Torque (N)");
+xlabel("Time (s)");
+legend("T_x", "T_y", "T_z");
 
 %% Canard Command History
 figure('Name', 'Canard Angles');

@@ -158,9 +158,9 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
         vx_dot;
         vy_dot;
         vz_dot;
-        dw_ib_x;
-        dw_ib_y;
-        dw_ib_z;
+        dw_ib(1);
+        dw_ib(2);
+        dw_ib(3);
         -m_dot;
     ];
 
