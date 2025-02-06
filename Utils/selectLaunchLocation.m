@@ -10,7 +10,7 @@ function lla = selectLaunchLocation()
     title(geoAxes, 'Click on the map to select the launch location');
     
     % Wait for the user to click on the map
-    [lon, lat] = ginput(1); % Gets longitude and latitude from the clicked point
+    [lat, lon] = ginput(1); % Gets longitude and latitude from the clicked point
     
     % Ask for altitude input (optional)
     prompt = {'Enter altitude (m):'};

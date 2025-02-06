@@ -17,7 +17,18 @@ AeroModel = initMissileAeroModel();
 % AeroModel = initRocketAeroModel();
 
 % Motor Model
-MotorModel = initMotorModel();
+% MotorModel = initMotorModel();
+
+% Launch Configuration GUI
+LaunchConfigGUI();
+waitfor(findobj('Type', 'figure', 'Name', 'Launch Configuration'));
+
+% Load the saved configuration
+if exist('lastConfig.mat', 'file')
+    load('lastConfig.mat', 'config');
+else
+    error('Configuration file not found. Please run the GUI first.');
+end
 
 %% Simulator Config **FOR SIMULINK USE LATER**
 % Time Configuration
@@ -30,11 +41,11 @@ simCfg.time = time;
 
 %% Launch Site Initialization
 % [launchLat, launchLon, launchAlt] = selectLaunchLocation();
-launchLat =  42.2738703; % [deg] Latitude
-launchLon = -71.8098593; % [deg] Longitude
-launchAlt = 180; % [m] Altitude MSL
+% launchLat =  42.2738703; % [deg] Latitude
+% launchLon = -71.8098593; % [deg] Longitude
+% launchAlt = 180; % [m] Altitude MSL
 
-launchLLA = [launchLat, launchLon, launchAlt];
+launchLLA = config.LLA;
 currLLA = launchLLA;
 
 launch_ECEF_m = lla2ecef(launchLLA);
