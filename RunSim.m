@@ -157,11 +157,17 @@ while(currLLA(3) >= -5)
         rollCmd = deg2rad(35);
         pitchCmd = deg2rad(45);
         yawCmd = deg2rad(0);
+        
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 3, 0, 0, time.dt, kins, inds, AeroModel);
+        % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 3, 0, 0, time.dt, kins, inds, AeroModel);
 
-        canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
+        % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
+
+        canardInput.d1 = deg2rad(0);
+        canardInput.d2 = deg2rad(0);
+        canardInput.d3 = deg2rad(0);
+        canardInput.d4 = deg2rad(0);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];

@@ -24,7 +24,12 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     a = sqrt(const.gamma_air*const.R_air*atmo.getTemperature()); % [m/s] Speed of sound at state
 
-    v_ecef = [x(inds.vx_ecef); x(inds.vy_ecef); x(inds.vz_ecef)]; % [m/s] Velocity vector in ECEF
+    v_b_ecef = [x(inds.vx_ecef); x(inds.vy_ecef); x(inds.vz_ecef)]; % [m/s] Velocity vector in ECEF
+
+    % Relative airspeed
+    V_wind_ECEF = WindModel(x, inds);
+
+    v_ecef = v_b_ecef - V_wind_ECEF;
 
     M = norm(v_ecef) / a; % Mach Number
 
@@ -111,6 +116,11 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     F_c_ECEF = R_EB * F_c_B;
 
+    %% Wind Induced Force
+    F_wind_B = R_EB' * (q_inf * AeroModel.Cy_wind * kins.S * [-v_hat_B(2); 0; v_hat_B(1)]);
+
+    M_wind_B = F_wind_B * kins.x_cp;
+
     %% Damping Moments
     % Damping moments (proportional to angular velocities)
     %% I*omega_ib_dot + omega_ib x I = Sum_Moments
@@ -119,9 +129,9 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
-    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
-    M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
-    M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
+    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x + M_wind_B(1); % Roll moment with damping
+    M_y_b = M_1_y + M_2_y + M_damp_y + M_wind_B(2); % Pitch moment with damping
+    M_z_b = M_3_z + M_4_z + M_damp_z + M_wind_B(3); % Yaw moment with damping
 
     %% Angular Accelerations
     % dw_ib_x = M_x_b / kins.I_x;

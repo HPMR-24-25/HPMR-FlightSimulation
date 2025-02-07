@@ -34,4 +34,7 @@ function ModelData = initRocketAeroModel()
     ModelData.damping.Cd_x = 0.3;
     ModelData.damping.Cd_y = 0.5;
     ModelData.damping.Cd_z = 0.5;
+
+    % Good estimate is C_n * sideslip angle
+    ModelData.Cy_wind = 0.4;
 end
