@@ -124,9 +124,10 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
 
     %% Angular Accelerations
-    dw_ib_x = M_x_b / kins.I_x;
-    dw_ib_y = M_y_b / kins.I_y;
-    dw_ib_z = M_z_b / kins.I_z;
+    % dw_ib_x = M_x_b / kins.I_x;
+    % dw_ib_y = M_y_b / kins.I_y;
+    % dw_ib_z = M_z_b / kins.I_z;
+    dw_ib = kins.I \ (cross(x(inds.w_ib), (kins.I * x(inds.w_ib))) + [M_x_b; M_y_b; M_z_b]);
 
     %% Quaternion Update
     q_dot = 0.5 * [
@@ -153,9 +154,9 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
         vx_dot;
         vy_dot;
         vz_dot;
-        dw_ib_x;
-        dw_ib_y;
-        dw_ib_z;
+        dw_ib(1);
+        dw_ib(2);
+        dw_ib(3);
         -m_dot;
     ];
 
