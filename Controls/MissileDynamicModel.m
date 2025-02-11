@@ -53,6 +53,9 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
 
+    beta = atan2(v_hat_B(2), v_hat_B(1));
+    
+
     %% Missile Body Drag
 
     % Dynamic Pressure
@@ -117,7 +120,8 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     F_c_ECEF = R_EB * F_c_B;
 
     %% Wind Induced Force
-    F_wind_B = R_EB' * (q_inf * AeroModel.Cy_wind * kins.S * [-v_hat_B(2); 0; v_hat_B(1)]);
+    Cy_wind = 0.3 * beta;
+    F_wind_B = R_EB' * (q_inf * Cy_wind * kins.S * [-v_hat_B(2); 0; v_hat_B(1)]);
 
     M_wind_B = F_wind_B * kins.x_cp;
 
