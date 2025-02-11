@@ -162,7 +162,7 @@ while(currLLA(3) >= -5)
         Cmd = [rollCmd; pitchCmd; yawCmd];
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        [canardTargetInput, L] = Controller_Lyapunov(x_t, Cmd, 0.05, 0, 0, kins, inds, AeroModel, time.dt);
+        [canardTargetInput, L] = Controller_Lyapunov(x_t, Cmd, 0.05, 0, 0.01, kins, inds, AeroModel, time.dt);
         canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
 
         % Update the historical command for analysis

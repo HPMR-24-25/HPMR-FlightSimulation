@@ -19,7 +19,6 @@ w = x(inds.w_ib);
 
 
 %% Lyapunov
-% not sure if this function works for quaternion set up
 qc = euler2quaternion(cmd);
 
 qc_inv = [-qc(1); -qc(2); -qc(3); qc(4)];
@@ -62,7 +61,7 @@ A = [d -d d -d;
 
 B = [L(1)/H; L(2)/H; L(3)/H];
 
-cmd = A\B;
+cmd = pinv(A)*B;
 
 canardInput.d1 = cmd(1);
 canardInput.d2 = cmd(2);
