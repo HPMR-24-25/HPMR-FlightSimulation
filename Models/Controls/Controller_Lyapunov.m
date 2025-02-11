@@ -68,6 +68,74 @@ canardInput.d2 = cmd(2);
 canardInput.d3 = cmd(3);
 canardInput.d4 = cmd(4);
 
+% lla = ecef2lla(x(inds.pos)',"wgs84");
+% alt = lla(3);
+% AtmosphericModel(alt);
+% 
+% d = kins.diameter;
+% r = kins.x_cp;
+% rho_inf = AtmosphericModel.rho_sl;
+% v_inf = norm(v);
+% S = kins.S;
+% 
+% % Not sure if this is right, check notebook
+% CL_delta = AeroModel.canard.CL_delta;
+% % CL = CL_delta*qc;
+% 
+% q_inf = 0.5*rho_inf*v_inf^2;
+% 
+% H = CL_delta*q_inf*S;
+% 
+% A = [d -d d -d;
+%      r 0 -r 0;
+%      0 -r 0 r];
+% 
+% B = [L(1)/H; L(2)/H; L(3)/H];
+% 
+% cmd = pinv(A)*B;
+% 
+% canardInput.d1 = cmd(1);
+% canardInput.d2 = cmd(2);
+% canardInput.d3 = cmd(3);
+% canardInput.d4 = cmd(4);
+
+T_x = L(1);
+T_y = L(2);
+T_z = L(3);
+
+    lla = ecef2lla(x(inds.pos),"wgs84");
+    alt = lla(3);
+    AtmosphericModel(alt);
+
+    rho_inf = AtmosphericModel.rho_sl;
+    v_inf = norm(x(inds.vel, 2));
+    S = kins.S; 
+
+    CL_delta = AeroModel.canard.CL_delta;
+
+    q_inf = 0.5 * rho_inf * v_inf^2;
+
+    H = CL_delta * q_inf * S;
+
+    C_p = (kins.diameter/2) + (kins.canard.height/2);
+
+    A = [
+        C_p -C_p C_p -C_p;
+        0 kins.x_cp 0 -kins.x_cp;
+        -kins.x_cp 0 kins.x_cp 0;
+    ];
+
+    % Compute b vector
+    b = [T_x/H; T_y/H; T_z/H];
+
+    cmd = pinv(A) * b;
+
+    canardInput.d1 = cmd(1);
+    canardInput.d2 = cmd(2);
+    canardInput.d3 = cmd(3);
+    canardInput.d4 = cmd(4);
+
+
 %% Functions
     function quadprod = Qmult(p, q)
         q13 = q(1:3);
