@@ -1,4 +1,4 @@
-function [canardInput, L] = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
+function [canardInput, T] = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
 % Controller_Lyapunov - Lyapunov attitude controller
 % Roll, Pitch, and Yaw controller using a P and D gains
 % Inputs:
@@ -14,7 +14,7 @@ function [canardInput, L] = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, Aer
 q = [x(inds.qx); x(inds.qy); x(inds.qz); x(inds.qw)];
 
 v = x(inds.vel);
-hello
+
 w = x(inds.w_ib);
 
 
@@ -68,9 +68,10 @@ L = -P * sign(dq(4))*dq(1:3)-D*x(inds.w_ib);
 % canardInput.d4 = cmd(4);
 
 
-T_x = L(1);
-T_y = L(2);
-T_z = L(3);
+T.x = L(1);
+T.y = L(2);
+T.z = L(3);
+
 
     lla = ecef2lla(x(inds.pos)',"wgs84");
     alt = lla(3);
@@ -97,7 +98,7 @@ T_z = L(3);
 %          0             -kins.x_cp     0             kins.x_cp ];
 
     % Compute b vector
-    b = [T_x; T_y; T_z];
+    b = [T.x; T.y; T.z];
 
     command = pinv(A) * b;
 

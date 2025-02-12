@@ -131,6 +131,7 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
 % Guidance Storage
 cmdHist = zeros(4, numTimePts);
+THist = zeros(3, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
 stateBuffer = nan(size(x_t, 1), 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
@@ -143,6 +144,7 @@ numSteadyPts = steadyStateDuration / time.dt;
 tRecord(1:numSteadyPts) = linspace(-steadyStateDuration+time.dt, time.t0, numSteadyPts);
 xRecord(:, 1:numSteadyPts) = repmat(x_0, 1, numSteadyPts); % Repeat initial state
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
+THist(:, 1:numSteadyPts) = zeros(3, numSteadyPts); % Zero torques
 colNum = numSteadyPts;
 
 while(currLLA(3) >= -5)
@@ -154,14 +156,14 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= steadyStateDuration + 4 && t <= steadyStateDuration + 8)
-        rollCmd = deg2rad(35);
-        pitchCmd = deg2rad(45);
+        rollCmd = deg2rad(0);
+        pitchCmd = deg2rad(35);
         yawCmd = deg2rad(0);
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 3, 0, 0, time.dt, kins, inds, AeroModel);
-
+        %canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 3, 0, 0, time.dt, kins, inds, AeroModel);
+        [canardTargetInput,T] = Controller_Lyapunov(x_t, [rollCmd; pitchCmd; yawCmd], 3, 0, 0, kins, inds, AeroModel, time.dt);
         canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
 
         % canardInput.d1 = deg2rad(0);
@@ -171,6 +173,9 @@ while(currLLA(3) >= -5)
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
+
+        % Update the historical torque for analysis
+        THist(:,colNum) = [T.x, T.y, T.z];
 
         % Update previous canard input state for next iteration
         prevCanardInput = canardInput;
@@ -282,6 +287,15 @@ ylabel("Actuation (deg)");
 xlabel("Time (s)");
 grid on;
 legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
+
+%% Torque Command History
+figure('Name', 'Canard Angles');
+plot(tRecord(:), abs(THist));
+title('Torques');
+ylabel("Torque (Nm)");
+xlabel("Time (s)");
+grid on;
+legend('X Torque', 'Y Torque', 'Z Torque');
 
 % figure('Name', 'Target Position');
 % subplot(3,1,1);
