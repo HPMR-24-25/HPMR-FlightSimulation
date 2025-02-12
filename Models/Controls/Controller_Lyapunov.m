@@ -30,44 +30,12 @@ dq = [qc_inv(4) * q(1:3) + q(4) * qc_inv(1:3) - cross(q(1:3), qc_inv(1:3));
 L = -P * sign(dq(4))*dq(1:3)-D*x(inds.w_ib);
 
 % dq_2 = Qmult(q,Qinv(qc))
-
 % L_1 = -P*sign(dq(4))*dq(1:3)-D*(1+dq(1:3)'*dq(1:3))*w
 % L_2 = -P*sign(dq(4))*dq(1:3)-D*(1-dq(1:3)'*dq(1:3))*w
 
 
 %% Torque to Canard Actuations
 % tranpose could be wrong here
-lla = ecef2lla(x(inds.pos)',"wgs84");
-alt = lla(3);
-AtmosphericModel(alt);
-
-d = kins.diameter;
-r = kins.x_cp;
-rho_inf = AtmosphericModel.rho_sl;
-v_inf = norm(v);
-S = kins.S;
-
-% Not sure if this is right, check notebook
-CL_delta = AeroModel.canard.CL_delta;
-% CL = CL_delta*qc;
-
-q_inf = 0.5*rho_inf*v_inf^2;
-
-H = CL_delta*q_inf*S;
-
-A = [d -d d -d;
-     r 0 -r 0;
-     0 -r 0 r];
-
-B = [L(1)/H; L(2)/H; L(3)/H];
-
-cmd = pinv(A)*B;
-
-canardInput.d1 = cmd(1);
-canardInput.d2 = cmd(2);
-canardInput.d3 = cmd(3);
-canardInput.d4 = cmd(4);
-
 % lla = ecef2lla(x(inds.pos)',"wgs84");
 % alt = lla(3);
 % AtmosphericModel(alt);
@@ -99,16 +67,17 @@ canardInput.d4 = cmd(4);
 % canardInput.d3 = cmd(3);
 % canardInput.d4 = cmd(4);
 
+
 T_x = L(1);
 T_y = L(2);
 T_z = L(3);
 
-    lla = ecef2lla(x(inds.pos),"wgs84");
+    lla = ecef2lla(x(inds.pos)',"wgs84");
     alt = lla(3);
     AtmosphericModel(alt);
 
     rho_inf = AtmosphericModel.rho_sl;
-    v_inf = norm(x(inds.vel, 2));
+    v_inf = norm(x(inds.vel));
     S = kins.S; 
 
     CL_delta = AeroModel.canard.CL_delta;
@@ -119,21 +88,23 @@ T_z = L(3);
 
     C_p = (kins.diameter/2) + (kins.canard.height/2);
 
-    A = [
-        C_p -C_p C_p -C_p;
-        0 kins.x_cp 0 -kins.x_cp;
-        -kins.x_cp 0 kins.x_cp 0;
-    ];
+    A = [C_p        -C_p       C_p         -C_p;
+        kins.x_cp  0          -kins.x_cp  0;
+        0          -kins.x_cp 0           kins.x_cp ];
+
+%     A = [kins.diameter -kins.diameter kins.diameter -kins.diameter;
+%          kins.x_cp     0              -kins.x_cp    0;
+%          0             -kins.x_cp     0             kins.x_cp ];
 
     % Compute b vector
-    b = [T_x/H; T_y/H; T_z/H];
+    b = [T_x; T_y; T_z];
 
-    cmd = pinv(A) * b;
+    command = pinv(A) * b;
 
-    canardInput.d1 = cmd(1);
-    canardInput.d2 = cmd(2);
-    canardInput.d3 = cmd(3);
-    canardInput.d4 = cmd(4);
+    canardInput.d1 = command(1);
+    canardInput.d2 = command(2);
+    canardInput.d3 = command(3);
+    canardInput.d4 = command(4);
 
 
 %% Functions
