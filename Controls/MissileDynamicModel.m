@@ -28,6 +28,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     % Relative airspeed
     V_wind_ECEF = WindModel(x, inds);
+    % V_wind_ECEF = [0; 0; 0];
 
     v_ecef = v_b_ecef - V_wind_ECEF;
 
@@ -119,11 +120,19 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     F_c_ECEF = R_EB * F_c_B;
 
-    %% Wind Induced Force
+    % Compute wind force coefficient (Cy_wind) based on sideslip angle (beta)
     Cy_wind = 0.3 * beta;
-    F_wind_B = R_EB' * (q_inf * Cy_wind * kins.S * [-v_hat_B(2); 0; v_hat_B(1)]);
-
-    M_wind_B = F_wind_B * kins.x_cp;
+    
+    % Apply threshold to avoid wind force at low velocity
+    if norm(v_ecef) < 15
+        Cy_wind = 0;
+    end
+    
+    % Compute wind-induced force in body frame
+    F_wind_B = q_inf * Cy_wind * kins.S * [-v_hat_B(2); 0; v_hat_B(1)];
+    
+    % Compute the wind-induced moment using the cross product (correct approach)
+    M_wind_B = cross([kins.x_cp; 0; 0], F_wind_B);
 
     %% Damping Moments
     % Damping moments (proportional to angular velocities)
@@ -133,9 +142,18 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
-    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x + M_wind_B(1); % Roll moment with damping
-    M_y_b = M_1_y + M_2_y + M_damp_y + M_wind_B(2); % Pitch moment with damping
-    M_z_b = M_3_z + M_4_z + M_damp_z + M_wind_B(3); % Yaw moment with damping
+    % M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x + M_wind_B(1); % Roll moment with damping
+    % M_y_b = M_1_y + M_2_y + M_damp_y + M_wind_B(2); % Pitch moment with damping
+    % M_z_b = M_3_z + M_4_z + M_damp_z + M_wind_B(3); % Yaw moment with damping
+    % M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
+    % M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
+    % M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
+
+    C_p = (kins.diameter/2) + (kins.canard.height/2);
+
+    M_x_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4) * C_p + M_damp_x;
+    M_y_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3) * kins.x_cp + M_damp_y;
+    M_z_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2) * kins.x_cp + M_damp_z;
 
     %% Angular Accelerations
     % dw_ib_x = M_x_b / kins.I_x;

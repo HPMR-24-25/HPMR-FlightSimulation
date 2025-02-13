@@ -31,9 +31,9 @@ function ModelData = initMissileAeroModel()
     ModelData.canard.CL_delta = 5.5;
 
     % Aerodynamic Restoring Moment Coefficients
-    ModelData.damping.Cd_x = 0.3;
-    ModelData.damping.Cd_y = 0.5;
-    ModelData.damping.Cd_z = 0.5;
+    ModelData.damping.Cd_x = 0.1;
+    ModelData.damping.Cd_y = 0.3;
+    ModelData.damping.Cd_z = 0.3;
 
     % Good estimate is C_n * sideslip angle
     ModelData.Cy_wind = 0.4;

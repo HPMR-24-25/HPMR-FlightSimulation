@@ -67,11 +67,11 @@ function [canardInput, T] = AttitudeController_PID(x, desiredAttitude, P, I, D, 
     ];
 
     % Compute b vector
-    b = [T_x; T_y; T_z];
-    % b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta)) * ...
-    %     [T_x; 
-    %      T_y; 
-    %      T_z];
+    % b = [T_x; T_y; T_z];
+    b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta)) * ...
+        [T_x; 
+         T_y; 
+         T_z];
 
     % cmd = b / A';
     cmd = pinv(A) * b;

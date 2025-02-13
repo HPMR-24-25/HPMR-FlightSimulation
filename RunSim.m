@@ -153,16 +153,18 @@ while(currLLA(3) >= -5)
     stateBuffer(:, 1) = x_t;
 
     % Attempt to control roll between 4s and 8s
-    if(t >= steadyStateDuration + 4 && t <= steadyStateDuration + 8)
-        rollCmd = deg2rad(35);
+    if(t >= 4 && t <= 20)
+        rollCmd = deg2rad(5);
         pitchCmd = deg2rad(45);
         yawCmd = deg2rad(0);
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 3, 0, 0, time.dt, kins, inds, AeroModel);
+        canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
+        % canardTargetInput = Controller_Lyapunov(x_t, [rollCmd; pitchCmd; yawCmd], 20, 0, 0, kins, inds, AeroModel, time.dt);
 
-        canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
+        % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
+        canardInput = canardTargetInput;
 
         % canardInput.d1 = deg2rad(0);
         % canardInput.d2 = deg2rad(0);
@@ -213,13 +215,13 @@ lla_target = ecef2lla([xRecord_target(1, :)', xRecord_target(2, :)', xRecord_tar
 position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)'];
 
 % Create a geoglobe
-uif = uifigure('Name', 'Vehicle Trajectory');
-g = geoglobe(uif);
-
-geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
-hold(g,'on') % retains plot so that new plots can be added to the same plot
-geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
-hold(g,'off')
+% uif = uifigure('Name', 'Vehicle Trajectory');
+% g = geoglobe(uif);
+% 
+% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
+% hold(g,'on') % retains plot so that new plots can be added to the same plot
+% geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
+% hold(g,'off')
 
 %% Euler Angles
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
