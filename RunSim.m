@@ -156,8 +156,8 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= steadyStateDuration + 4 && t <= steadyStateDuration + 8)
-        rollCmd = deg2rad(0);
-        pitchCmd = deg2rad(35);
+        rollCmd = deg2rad(10);
+        pitchCmd = deg2rad(45);
         yawCmd = deg2rad(0);
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);

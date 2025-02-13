@@ -89,9 +89,9 @@ T.z = L(3);
 
     C_p = (kins.diameter/2) + (kins.canard.height/2);
 
-    A = [C_p        -C_p       C_p         -C_p;
-        kins.x_cp  0          -kins.x_cp  0;
-        0          -kins.x_cp 0           kins.x_cp ];
+    A = [-0.25*C_p        -0.25*C_p       0.25*C_p         0.25*C_p;
+        0.5*kins.x_cp  0          0.5*kins.x_cp  0;
+        0          0.5*kins.x_cp 0           0.5*kins.x_cp ];
 
 %     A = [kins.diameter -kins.diameter kins.diameter -kins.diameter;
 %          kins.x_cp     0              -kins.x_cp    0;
