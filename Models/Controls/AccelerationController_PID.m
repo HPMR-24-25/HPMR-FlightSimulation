@@ -53,8 +53,6 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
 
     accel_B = R_EB*accel;
 
-%     lla = ecef2lla(x(inds.pos)',"wgs84");
-%     alt = lla(3);
     AtmosphericModel(alt);
 
     d = kins.diameter;
@@ -88,19 +86,12 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
     ];
 
     % Compute b vector
-    % b = [T_x; T_y; T_z];
     b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)) * ...
-        [accel_B(1); 
+        [0; 
          accel_B(2); 
          accel_B(3)];
 
-    % cmd = b / A';
     cmd = pinv(A) * b;
-
-    % canardInput.d1 = T_x;
-    % canardInput.d2 = T_x;
-    % canardInput.d3 = T_x;
-    % canardInput.d4 = T_x;
 
     canardInput.d1 = cmd(1);
     canardInput.d2 = cmd(2);

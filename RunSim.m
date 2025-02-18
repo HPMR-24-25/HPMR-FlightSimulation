@@ -164,14 +164,33 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 20)
-        ax = deg2rad(5);
-        ay = deg2rad(45);
-        az = deg2rad(0);
+
+        %% ECEF to Body
+        r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
+        quat = [x_t(inds.qw), x_t(inds.qx), x_t(inds.qy), x_t(inds.qz)];
+        lla = ecef2lla(r_ecef', 'WGS84');
+        lat = lla(1);
+        lon = lla(2);
+        alt = lla(3);
+
+        R_ET = [
+            -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
+            -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
+            cosd(lat),            0,         -sind(lat)
+            ];
+
+        R_TB = quat2rotm(quat);
+
+        R_EB = R_ET * R_TB;
+        %%
+
+        accel_cmd_B = [0; 10; 0];
+        accel_cmd_ecef = R_EB'*accel_cmd_B;
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
         % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
-        canardTargetInput = AccelerationController_PID(x_t, stateBuffer, [ax; ay; az], 10, 0, 0, time.dt, kins, inds, AeroModel);
+        canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
 
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;
