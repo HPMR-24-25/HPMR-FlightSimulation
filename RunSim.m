@@ -41,6 +41,8 @@ currLLA = launchLLA;
 
 launch_ECEF_m = lla2ecef(launchLLA);
 
+accel_ecef = [0; 0; 0];
+
 %% Target Initialization
 targetLat = 42.33599546; % [deg] Latitude
 targetLon = -71.8098593; % [deg] Longitude
@@ -120,6 +122,12 @@ tRecord(1,1) = t;
 xRecord = nan(length(x_0), numTimePts);
 xRecord(:,1) = x_t;
 
+accelRecord = nan(length(accel_ecef), numTimePts);
+accelRecord(:,1) = accel_ecef;
+
+accelRecordB = nan(length(accel_ecef), numTimePts);
+accelRecordB(:,1) = accel_ecef;
+
 xRecord_target = nan(length(x_0_target), numTimePts);
 xRecord_target(:,1) = x_t_target;
 
@@ -132,7 +140,7 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 % Guidance Storage
 cmdHist = zeros(4, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
-stateBuffer = nan(size(x_t, 1), 2);
+stateBuffer = nan(size(accel_ecef, 1), 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
 
 %% Fill steady state data for set period of time (Simulate Launcher)
@@ -142,6 +150,8 @@ numSteadyPts = steadyStateDuration / time.dt;
 % Pre-Fill steady state values
 tRecord(1:numSteadyPts) = linspace(-steadyStateDuration+time.dt, time.t0, numSteadyPts);
 xRecord(:, 1:numSteadyPts) = repmat(x_0, 1, numSteadyPts); % Repeat initial state
+accelRecord(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
+accelRecordB(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
 colNum = numSteadyPts;
 
@@ -150,18 +160,18 @@ while(currLLA(3) >= -5)
 
     % Update buffer with the latest state; shift older states
     stateBuffer(:, 2) = stateBuffer(:, 1);
-    stateBuffer(:, 1) = x_t;
+    stateBuffer(:, 1) = accel_ecef;
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 20)
-        rollCmd = deg2rad(5);
-        pitchCmd = deg2rad(45);
-        yawCmd = deg2rad(0);
+        ax = deg2rad(5);
+        ay = deg2rad(45);
+        az = deg2rad(0);
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
-        % canardTargetInput = Controller_Lyapunov(x_t, [rollCmd; pitchCmd; yawCmd], 20, 0, 0, kins, inds, AeroModel, time.dt);
+        % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
+        canardTargetInput = AccelerationController_PID(x_t, stateBuffer, [ax; ay; az], 10, 0, 0, time.dt, kins, inds, AeroModel);
 
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;
@@ -197,12 +207,34 @@ while(currLLA(3) >= -5)
     % Convert ECEF position to LLA for altitude check
     currLLA = ecef2lla([x_t(inds.px_ecef)', x_t(inds.py_ecef)', x_t(inds.pz_ecef)']);
 
+    %% ECEF to Body
+    r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
+    quat = [x_t(inds.qw), x_t(inds.qx), x_t(inds.qy), x_t(inds.qz)];
+    lla = ecef2lla(r_ecef', 'WGS84');
+    lat = lla(1);
+    lon = lla(2);
+    alt = lla(3);
+
+    R_ET = [
+        -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
+        -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
+         cosd(lat),            0,         -sind(lat)
+    ];
+
+    R_TB = quat2rotm(quat);
+
+    R_EB = R_ET * R_TB;
+    %%
+
     % Record the results for future analysis
     xRecord(:, colNum) = x_t;
     tRecord(1, colNum) = t;
 
     % Extract Acceleration Readings
     [~, accel_ecef] = MissileDynamicModel(x_out(end, :)', t, canardInput, AeroModel, MotorModel, const, kins, inds);
+
+    accelRecord(:, colNum) = accel_ecef;
+    accelRecordB(:, colNum) = R_EB*accel_ecef;
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 end
@@ -267,14 +299,14 @@ ylabel("Velocity (m/s)");
 xlabel("Time (s)");
 grid on;
 
-% Altitude Vs Downrange
-downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
-figure('Name', 'Conops');
-plot(downrange, lla(:,3));
-title("Mission Conops");
-ylabel("Altitude (m)");
-xlabel("Downrange (m)");
-grid on;
+% % Altitude Vs Downrange
+% downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
+% figure('Name', 'Conops');
+% plot(downrange, lla(:,3));
+% title("Mission Conops");
+% ylabel("Altitude (m)");
+% xlabel("Downrange (m)");
+% grid on;
 
 %% Canard Command History
 figure('Name', 'Canard Angles');
@@ -284,6 +316,24 @@ ylabel("Actuation (deg)");
 xlabel("Time (s)");
 grid on;
 legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
+
+%% Acceleration ECEF
+figure('Name', 'Acceleration');
+plot(tRecord(:), accelRecord);
+title('Acceleration ECEF');
+ylabel("Acceleration");
+xlabel("Time (s)");
+grid on;
+legend('x', 'y', 'z');
+
+%% Acceleration Body
+figure('Name', 'Acceleration');
+plot(tRecord(:), accelRecordB);
+title('Acceleration Body');
+ylabel("Acceleration");
+xlabel("Time (s)");
+grid on;
+legend('x', 'y', 'z');
 
 % figure('Name', 'Target Position');
 % subplot(3,1,1);
