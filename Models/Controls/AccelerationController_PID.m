@@ -51,7 +51,7 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
 
     accel = [accel_x; accel_y; accel_z];
 
-    accel_B = R_EB*accel;
+    accel_B = R_EB'*accel;
 
     AtmosphericModel(alt);
 
