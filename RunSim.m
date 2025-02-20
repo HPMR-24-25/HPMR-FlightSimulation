@@ -55,7 +55,7 @@ target_ECEF = lla2ecef(targetLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(45);
+pitch_0 = deg2rad(90);
 yaw_0 = deg2rad(0);
 
 q_0 = eul2quat(roll_0, pitch_0, yaw_0);
@@ -162,31 +162,29 @@ while(currLLA(3) >= -5)
     stateBuffer(:, 2) = stateBuffer(:, 1);
     stateBuffer(:, 1) = accel_ecef;
 
+    %% ECEF to Body
+    r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
+    quat = [x_t(inds.qw), x_t(inds.qx), x_t(inds.qy), x_t(inds.qz)];
+    lla = ecef2lla(r_ecef', 'WGS84');
+    lat = lla(1);
+    lon = lla(2);
+    alt = lla(3);
+
+    R_ET = [
+        -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
+        -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
+        cosd(lat),            0,         -sind(lat)
+        ];
+
+    R_TB = quat2rotm(quat);
+
+    R_EB = R_ET' * R_TB;
+
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 20)
-
-        %% ECEF to Body
-        r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
-        quat = [x_t(inds.qw), x_t(inds.qx), x_t(inds.qy), x_t(inds.qz)];
-        lla = ecef2lla(r_ecef', 'WGS84');
-        lat = lla(1);
-        lon = lla(2);
-        alt = lla(3);
-
-        R_ET = [
-            -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
-            -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
-            cosd(lat),            0,         -sind(lat)
-            ];
-
-        R_TB = quat2rotm(quat);
-
-        R_EB = R_ET * R_TB;
-        %%
-
-        %accel_cmd_B = [0; 10; 0];
-        %accel_cmd_ecef = R_EB'*accel_cmd_B;
-        accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
+        accel_cmd_B = [0; 10; 0];
+        accel_cmd_ecef = R_EB * accel_cmd_B;
+        % accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
@@ -243,8 +241,7 @@ while(currLLA(3) >= -5)
 
     R_TB = quat2rotm(quat);
 
-    R_EB = R_ET * R_TB;
-    %%
+    R_EB = R_ET' * R_TB;
 
     % Record the results for future analysis
     xRecord(:, colNum) = x_t;
@@ -257,6 +254,14 @@ while(currLLA(3) >= -5)
     accelRecordB(:, colNum) = R_EB*accel_ecef;
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
+
+    %% Visualize Quaternion
+    q = quaternion(x_t(inds.q)');
+
+    poseplot(q, [0,0,0]);
+
+    drawnow;
+
 end
 
 %% Plot Vehicle Trajectory
