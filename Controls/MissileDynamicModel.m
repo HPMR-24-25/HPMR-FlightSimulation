@@ -162,12 +162,23 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     dw_ib = kins.I \ (cross(x(inds.w_ib), (kins.I * x(inds.w_ib))) + [M_x_b; M_y_b; M_z_b]);
 
     %% Quaternion Update
+    % q_dot = 0.5 * [
+    %      x(1), -x(2), -x(3), -x(4);
+    %      x(2),  x(1),  x(4), -x(3);
+    %      x(3), -x(4),  x(1),  x(2);
+    %      x(4),  x(3), -x(2),  x(1)
+    % ] * [0; x(inds.w_ib_x); x(inds.w_ib_y); x(inds.w_ib_z)];
+
     q_dot = 0.5 * [
-        -x(2), -x(3), -x(4);
-         x(1), -x(4),  x(3);
-         x(4),  x(1), -x(2);
-        -x(3),  x(2),  x(1);
-    ] * [x(inds.w_ib_x); x(inds.w_ib_y); x(inds.w_ib_z)];
+        -x(2) -x(3) -x(4);
+        x(1) -x(4) x(3);
+        x(4) x(1) -x(2);
+        -x(3) x(2) x(1);
+    ] * x(inds.w_ib);
+    
+    if(t >= 10)
+        disp("");
+    end
 
     %% Position Dynamics
     vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1) + F_c_ECEF(1)) / x(inds.mass) + gx_E;

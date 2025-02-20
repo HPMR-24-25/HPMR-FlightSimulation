@@ -16,7 +16,7 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
 
     R_TB = quat2rotm(quat);
 
-    R_EB = R_ET * R_TB;
+    R_EB = R_ET' * R_TB;
 
     %% PID
     accelBuff = accel_ecef';
