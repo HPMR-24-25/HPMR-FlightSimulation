@@ -82,7 +82,7 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
     A = [
         C_p/kins.I_x -C_p/kins.I_x C_p/kins.I_x -C_p/kins.I_x;
         kins.x_cp/kins.I_y 0 -kins.x_cp/kins.I_y 0;
-        0 kins.x_cp/kins.I_z 0 -kins.x_cp/kins.I_z;
+        0 -kins.x_cp/kins.I_z 0 kins.x_cp/kins.I_z;
     ];
 
     % Compute b vector

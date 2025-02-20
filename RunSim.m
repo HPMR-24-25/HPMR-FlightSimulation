@@ -184,8 +184,9 @@ while(currLLA(3) >= -5)
         R_EB = R_ET * R_TB;
         %%
 
-        accel_cmd_B = [0; 10; 0];
-        accel_cmd_ecef = R_EB'*accel_cmd_B;
+        %accel_cmd_B = [0; 10; 0];
+        %accel_cmd_ecef = R_EB'*accel_cmd_B;
+        accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
         
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
