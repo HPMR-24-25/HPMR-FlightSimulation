@@ -211,6 +211,9 @@ xlabel('Time (s)');
 grid on;
 hold on;
 
+% Plot update frequency
+updateFrequency = 10;
+plotCounter = 0;
 
 %% Run Simulation
 while(currLLA(3) >= -5)
@@ -318,18 +321,24 @@ while(currLLA(3) >= -5)
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 
-    %% Visualize Quaternion
-    lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
+    %% Live Plot Graph Update
+    plotCounter = plotCounter + 1;
+    if mod(plotCounter, updateFrequency) == 0
+        plotCounter = 0; % avoid plotCounter getting too large
+        set(pose, 'Orientation', quaternion(x_t(inds.q)'));
 
-    % Update Graphs
-    set(pose, 'Orientation', quaternion(x_t(inds.q)'));
-    set(altitudePlot, 'XData', tRecord, 'YData', lla(:, 3)); % Altitude vs Time
-    set(velocityPlot, 'XData', tRecord, 'YData', vecnorm(xRecord(inds.vel, :))); % Velocity vs Time
-    set(omegaXPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_x,:)); % Angular Vel X
-    set(omegaYPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_y,:)); % Angular Vel Y
-    set(omegaZPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_z,:)); % Angular Vel Z
+        lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
-    drawnow;
+        set(altitudePlot, 'XData', tRecord, 'YData', lla(:, 3)); % Altitude vs Time
+        set(velocityPlot, 'XData', tRecord, 'YData', vecnorm(xRecord(inds.vel, :))); % Velocity vs Time
+        set(omegaXPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_x,:)); % Angular Vel X
+        set(omegaYPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_y,:)); % Angular Vel Y
+        set(omegaZPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_z,:)); % Angular Vel Z
+    
+        drawnow;
+    end
+
+    
 end
 
 % %% Plot Vehicle Trajectory
