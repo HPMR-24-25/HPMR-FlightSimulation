@@ -53,7 +53,7 @@ currTargetLLA = targetLLA;
 
 target_ECEF = lla2ecef(targetLLA);
 
-%% Attitude Initialization
+% Attitude Initialization
 roll_0 = deg2rad(0);
 pitch_0 = deg2rad(90);
 yaw_0 = deg2rad(0);
@@ -65,12 +65,12 @@ w_ib_x = 0.00; % [rad/s]
 w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
 
-%% Velocity Initialization
+% Velocity Initialization
 Vx_E_0 = 1e-2; % [m/s]
 Vy_E_0 = 1e-2; % [m/s]
 Vz_E_0 = 1e-2; % [m/s]
 
-%% Initial Mass
+% Initial Mass
 m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
 
 %% Target Velocity Initialization
@@ -137,10 +137,10 @@ xRecord_targetCircle(:,1) = x_t_targetCircle;
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
-% Guidance Storage
+%% Guidance Storage
 cmdHist = zeros(4, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
-stateBuffer = nan(size(accel_ecef, 1), 2);
+stateBuffer = nan(size(x_t, 1), 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
 
 %% Fill steady state data for set period of time (Simulate Launcher)
@@ -155,12 +155,70 @@ accelRecordB(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
 colNum = numSteadyPts;
 
+%% Initialize Live Plots
+% Orientation plot with position
+figure('Name', 'Missile Pose');
+% Set up Pose Plot
+ax = gca;
+pose = poseplot(ax);
+pose.Orientation = quaternion(x_t(inds.q)');
+grid on;
+axis equal;
+xlabel('X (m)');
+ylabel('Y (m)');
+zlabel('Z (m)');
+title('Missile Orientation');
+
+% Flight Monitor Window
+figure('Name', 'Flight Data Monitoring');
+subplot(2,2,1);
+altitudePlot = plot(nan, nan, 'r');
+title('Altitude Vs. Time');
+ylabel('Altitude (m)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(2,2,3);
+velocityPlot = plot(nan, nan, 'r');
+title('Velocity Vs. Time');
+ylabel('Velocity (m/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,2,2);
+omegaXPlot = plot(nan, nan, 'r');
+title('Angular Velocity P (Roll Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,2,4);
+omegaYPlot = plot(nan, nan, 'g');
+title('Angular Velocity Q (Pitch Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,2,6);
+omegaZPlot = plot(nan, nan, 'b');
+title('Angular Velocity R (Yaw Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+
+%% Run Simulation
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
     % Update buffer with the latest state; shift older states
     stateBuffer(:, 2) = stateBuffer(:, 1);
-    stateBuffer(:, 1) = accel_ecef;
+    stateBuffer(:, 1) = x_t;
 
     %% ECEF to Body
     r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
@@ -182,22 +240,27 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 20)
+
+        rollCmd = deg2rad(5);
+        pitchCmd = deg2rad(45);
+        yawCmd = deg2rad(0);
+
         accel_cmd_B = [0; 10; 0];
         accel_cmd_ecef = R_EB * accel_cmd_B;
         % accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
         
-        % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
+        % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 10, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
         % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
-        canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
+        % canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
 
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
-        canardInput = canardTargetInput;
+        % canardInput = canardTargetInput;
 
-        % canardInput.d1 = deg2rad(0);
-        % canardInput.d2 = deg2rad(0);
-        % canardInput.d3 = deg2rad(0);
-        % canardInput.d4 = deg2rad(0);
+        canardInput.d1 = deg2rad(6);
+        canardInput.d2 = deg2rad(-6);
+        canardInput.d3 = deg2rad(6);
+        canardInput.d4 = deg2rad(-6);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -256,74 +319,66 @@ while(currLLA(3) >= -5)
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 
     %% Visualize Quaternion
-    q = quaternion(x_t(inds.q)');
+    lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
-    poseplot(q, [0,0,0]);
+    % Update Graphs
+    set(pose, 'Orientation', quaternion(x_t(inds.q)'));
+    set(altitudePlot, 'XData', tRecord, 'YData', lla(:, 3)); % Altitude vs Time
+    set(velocityPlot, 'XData', tRecord, 'YData', vecnorm(xRecord(inds.vel, :))); % Velocity vs Time
+    set(omegaXPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_x,:)); % Angular Vel X
+    set(omegaYPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_y,:)); % Angular Vel Y
+    set(omegaZPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_z,:)); % Angular Vel Z
 
     drawnow;
-
 end
 
-%% Plot Vehicle Trajectory
-lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
-
-lla_target = ecef2lla([xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)']);
-
-position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)'];
-
-% Create a geoglobe
-% uif = uifigure('Name', 'Vehicle Trajectory');
-% g = geoglobe(uif);
+% %% Plot Vehicle Trajectory
+% lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 % 
-% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
-% hold(g,'on') % retains plot so that new plots can be added to the same plot
-% geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
-% hold(g,'off')
-
-%% Euler Angles
-eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
-
-yawHist   = rad2deg(eulHist(:,1));
-pitchHist = rad2deg(eulHist(:,2));
-rollHist  = rad2deg(eulHist(:,3));
-
-% Plot
-figure('Name', 'Orientation');
-plot(tRecord(:), yawHist);
-hold on;
-plot(tRecord(:), pitchHist);
-plot(tRecord(:), rollHist);
-hold off;
-title("Euler Angles");
-legend('Yaw', 'Pitch', 'Roll');
-
-figure('Name', 'Angular Velocity');
-plot(tRecord(:), xRecord(inds.w_ib_x,:));
-hold on;
-plot(tRecord(:), xRecord(inds.w_ib_y,:));
-plot(tRecord(:), xRecord(inds.w_ib_z,:));
-hold off;
-title("Angular Velocity");
-legend('P', 'Q', 'R');
-
-%% Vehicle State
-
-figure('Name', 'Altitude');
-plot(tRecord(:), lla(:,3))
-title("Altitude Vs. Time");
-ylabel("Altitude (m)");
-xlabel("Time (s)");
-grid on;
-
-velocityHist = vecnorm(xRecord(inds.vel, :));
-
-figure('Name', 'Velocity');
-plot(tRecord(:), velocityHist);
-title('Velocity Vs. Time');
-ylabel("Velocity (m/s)");
-xlabel("Time (s)");
-grid on;
-
+% %% Euler Angles
+% eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
+% 
+% yawHist   = rad2deg(eulHist(:,1));
+% pitchHist = rad2deg(eulHist(:,2));
+% rollHist  = rad2deg(eulHist(:,3));
+% 
+% % Plot
+% figure('Name', 'Orientation');
+% plot(tRecord(:), yawHist);
+% hold on;
+% plot(tRecord(:), pitchHist);
+% plot(tRecord(:), rollHist);
+% hold off;
+% title("Euler Angles");
+% legend('Yaw', 'Pitch', 'Roll');
+% 
+% figure('Name', 'Angular Velocity');
+% plot(tRecord(:), xRecord(inds.w_ib_x,:));
+% hold on;
+% plot(tRecord(:), xRecord(inds.w_ib_y,:));
+% plot(tRecord(:), xRecord(inds.w_ib_z,:));
+% hold off;
+% title("Angular Velocity");
+% legend('P', 'Q', 'R');
+% 
+% %% Vehicle State
+% 
+% figure('Name', 'Altitude');
+% plot(tRecord(:), lla(:,3))
+% title("Altitude Vs. Time");
+% ylabel("Altitude (m)");
+% xlabel("Time (s)");
+% grid on;
+% 
+% velocityHist = vecnorm(xRecord(inds.vel, :));
+% 
+% figure('Name', 'Velocity');
+% plot(tRecord(:), velocityHist);
+% title('Velocity Vs. Time');
+% ylabel("Velocity (m/s)");
+% xlabel("Time (s)");
+% grid on;
+% 
 % % Altitude Vs Downrange
 % downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
 % figure('Name', 'Conops');
@@ -332,50 +387,30 @@ grid on;
 % ylabel("Altitude (m)");
 % xlabel("Downrange (m)");
 % grid on;
-
-%% Canard Command History
-figure('Name', 'Canard Angles');
-plot(tRecord(:), rad2deg(cmdHist));
-title('Canard Actuation');
-ylabel("Actuation (deg)");
-xlabel("Time (s)");
-grid on;
-legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
-
-%% Acceleration ECEF
-figure('Name', 'Acceleration');
-plot(tRecord(:), accelRecord);
-title('Acceleration ECEF');
-ylabel("Acceleration");
-xlabel("Time (s)");
-grid on;
-legend('x', 'y', 'z');
-
-%% Acceleration Body
-figure('Name', 'Acceleration');
-plot(tRecord(:), accelRecordB);
-title('Acceleration Body');
-ylabel("Acceleration");
-xlabel("Time (s)");
-grid on;
-legend('x', 'y', 'z');
-
-% figure('Name', 'Target Position');
-% subplot(3,1,1);
-% plot(tRecord(:), position_target_ECEF(:,1))
-% title("Target Position X Vs. Time");
-% ylabel("Position (m)");
+% 
+% %% Canard Command History
+% figure('Name', 'Canard Angles');
+% plot(tRecord(:), rad2deg(cmdHist));
+% title('Canard Actuation');
+% ylabel("Actuation (deg)");
 % xlabel("Time (s)");
 % grid on;
-% subplot(3,1,2);
-% plot(tRecord(:), position_target_ECEF(:,2))
-% title("Target Position Y Vs. Time");
-% ylabel("Position (m)");
+% legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
+% 
+% %% Acceleration ECEF
+% figure('Name', 'Acceleration');
+% plot(tRecord(:), accelRecord);
+% title('Acceleration ECEF');
+% ylabel("Acceleration");
 % xlabel("Time (s)");
 % grid on;
-% subplot(3,1,3);
-% plot(tRecord(:), position_target_ECEF(:,3))
-% title("Target Position Z Vs. Time");
-% ylabel("Position (m)");
+% legend('x', 'y', 'z');
+% 
+% %% Acceleration Body
+% figure('Name', 'Acceleration');
+% plot(tRecord(:), accelRecordB);
+% title('Acceleration Body');
+% ylabel("Acceleration");
 % xlabel("Time (s)");
 % grid on;
+% legend('x', 'y', 'z');

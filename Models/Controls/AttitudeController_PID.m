@@ -1,5 +1,5 @@
 function [canardInput, T] = AttitudeController_PID(x, desiredAttitude, P, I, D, dt, kins, inds, AeroModel)
-    
+
     eulBuff = quat2eul(x(inds.q, :)', 'ZYX');
     yawBuff = eulBuff(:, 1);
     pitchBuff = eulBuff(:, 2);
