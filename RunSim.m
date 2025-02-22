@@ -281,10 +281,9 @@ position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_ta
 % hold(g,'off')
 
 %% Euler Angles
-% quat = xRecord(1:4, :)';
-% quat = quat/norm(quat);
+
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
-% eulHist = quat2eul(quat, 'ZYX');
+
 
 yawHist   = rad2deg(eulHist(:,1));
 pitchHist = rad2deg(eulHist(:,2));
