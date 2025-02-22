@@ -27,8 +27,8 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     v_b_ecef = [x(inds.vx_ecef); x(inds.vy_ecef); x(inds.vz_ecef)]; % [m/s] Velocity vector in ECEF
 
     % Relative airspeed
-    V_wind_ECEF = WindModel(x, inds);
-    % V_wind_ECEF = [0; 0; 0];
+    %V_wind_ECEF = WindModel(x, inds);
+    V_wind_ECEF = [0; 0; 0];
 
     v_ecef = v_b_ecef - V_wind_ECEF;
 
