@@ -55,7 +55,6 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
 
     beta = atan2(v_hat_B(2), v_hat_B(1));
-    
 
     %% Missile Body Drag
 
@@ -151,9 +150,9 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     C_p = (kins.diameter/2) + (kins.canard.height/2);
 
-    M_x_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4) * C_p + M_damp_x;
-    M_y_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3) * kins.x_cp + M_damp_y;
-    M_z_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2) * kins.x_cp + M_damp_z;
+    M_x_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4) * C_p + M_damp_x + M_wind_B(1);
+    M_y_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3) * kins.x_cp + M_damp_y + M_wind_B(2);
+    M_z_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2) * kins.x_cp + M_damp_z + M_wind_B(3);
 
     %% Angular Accelerations
     % dw_ib_x = M_x_b / kins.I_x;
