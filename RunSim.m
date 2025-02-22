@@ -189,15 +189,15 @@ while(currLLA(3) >= -5)
         % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
         % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
-        canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
+        %canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
 
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
-        canardInput = canardTargetInput;
+%         canardInput = canardTargetInput;
 
-        % canardInput.d1 = deg2rad(0);
-        % canardInput.d2 = deg2rad(0);
-        % canardInput.d3 = deg2rad(0);
-        % canardInput.d4 = deg2rad(0);
+        canardInput.d1 = deg2rad(2);
+        canardInput.d2 = deg2rad(-2);
+        canardInput.d3 = deg2rad(2);
+        canardInput.d4 = deg2rad(-2);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -256,11 +256,11 @@ while(currLLA(3) >= -5)
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 
     %% Visualize Quaternion
-    q = quaternion(x_t(inds.q)');
-
-    poseplot(q, [0,0,0]);
-
-    drawnow;
+%     q = quaternion(x_t(inds.q)');
+% 
+%     poseplot(q, [0,0,0]);
+% 
+%     drawnow;
 
 end
 
@@ -281,7 +281,10 @@ position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_ta
 % hold(g,'off')
 
 %% Euler Angles
+% quat = xRecord(1:4, :)';
+% quat = quat/norm(quat);
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
+% eulHist = quat2eul(quat, 'ZYX');
 
 yawHist   = rad2deg(eulHist(:,1));
 pitchHist = rad2deg(eulHist(:,2));
