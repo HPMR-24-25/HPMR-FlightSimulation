@@ -158,10 +158,12 @@ colNum = numSteadyPts;
 %% Initialize Live Plots
 % Orientation plot with position
 figure('Name', 'Missile Pose');
+hold on;
 % Set up Pose Plot
 ax = gca;
-pose = poseplot(ax);
+pose = poseplot(ones('quaternion'), MeshFileName="Utils/Rocket Exterior.stl");
 pose.Orientation = quaternion(x_t(inds.q)');
+
 grid on;
 axis equal;
 xlabel('X (m)');
