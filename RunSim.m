@@ -44,14 +44,14 @@ launch_ECEF_m = lla2ecef(launchLLA);
 accel_ecef = [0; 0; 0];
 
 %% Target Initialization
-targetLat = 42.33599546; % [deg] Latitude
-targetLon = -71.8098593; % [deg] Longitude
-targetAlt = 4752; % [m] Altitude MSL
+% targetLat = 42.33599546; % [deg] Latitude
+% targetLon = -71.8098593; % [deg] Longitude
+% targetAlt = 4752; % [m] Altitude MSL
+% 
+% targetLLA = [targetLat, targetLon, targetAlt];
+% currTargetLLA = targetLLA;
 
-targetLLA = [targetLat, targetLon, targetAlt];
-currTargetLLA = targetLLA;
-
-target_ECEF = lla2ecef(targetLLA);
+target_ECEF = launch_ECEF_m+100;
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
@@ -73,22 +73,6 @@ Vz_E_0 = 1e-2; % [m/s]
 %% Initial Mass
 m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
 
-%% Target Velocity Initialization
-V_NED_m = 482.26; %[m/s]
-psi = 0;
-Vx_target = V_NED_m*sin(psi); % [m/s]
-Vy_target = V_NED_m*cos(psi); % [m/s]
-Vz_target = 0; % [m/s]
-
-R_ET = [
-        -sind(targetLat)*cosd(targetLon), -sind(targetLon), -cosd(targetLat)*cosd(targetLon);
-        -sind(targetLat)*sind(targetLon),  cosd(targetLon), -cosd(targetLat)*sind(targetLon);
-         cosd(targetLat),                                0,                  -sind(targetLat)
-    ];
-
-V_target_NED = [Vx_target; Vy_target; Vz_target];
-
-V_target_ECEF = R_ET*V_target_NED;
 
 %% State Initialization
 x_0 = [
@@ -108,13 +92,13 @@ x_t = x_0;
 %% Target State Initialization
 % x_0_target = [beta; target_ECEF'; V_target_ECEF];
 % gravity
-g = 32.2;
+g = 9.8;
 % initial target conditions
-Vt = 3400;
+Vt = 300;
 B = pi;
-Rtx_i = 40000;
-Rty_i = 10000;
-Rtz_i = 1000;
+Rtx_i = target_ECEF(1);
+Rty_i = target_ECEF(1);
+Rtz_i = target_ECEF(1);
 Vtx_i = Vt*cos(B);
 Vty_i = Vt*sin(B);
 Vtz_i = 0;
@@ -163,7 +147,20 @@ accelRecord(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 accelRecordB(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
 colNum = numSteadyPts;
+%% Target
+for i = 1:numTimePts
 
+    k1 = time.dt * TargetKinematicModel(t, x_t_target, aT);
+    k2 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k1, aT);
+    k3 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k2, aT);
+    k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
+    x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+
+    xRecord_target(:, i) = x_t_target;
+
+end
+
+%% Missile
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
@@ -264,6 +261,9 @@ while(currLLA(3) >= -5)
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 
+    %% PUT PRONAV HERE
+    accel_cmd(:,colNum) = TrueProNav(x_t, xRecord_target(:,colNum), 3, aT);
+
     %% Visualize Quaternion
 %     q = quaternion(x_t(inds.q)');
 % 
@@ -273,33 +273,23 @@ while(currLLA(3) >= -5)
 
 end
 
-for i = 1:numTimePts
 
-    k1 = time.dt * TargetKinematicModel(t, x_t_target, aT);
-    k2 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k1, aT);
-    k3 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k2, aT);
-    k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
-    x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
-
-    xRecord_target(:, i) = x_t_target;
-
-end
 
 %% Plot Vehicle Trajectory
 lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
-lla_target = ecef2lla([xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)']);
+lla_target = ecef2lla([xRecord_target(2, :)', xRecord_target(3, :)', xRecord_target(4, :)']);
 
-position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_target(3, :)'];
+position_target_ECEF = [xRecord_target(2, :)', xRecord_target(3, :)', xRecord_target(4, :)'];
 
 % Create a geoglobe
-uif = uifigure('Name', 'Vehicle Trajectory');
-g = geoglobe(uif);
-
-geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
-hold(g,'on') % retains plot so that new plots can be added to the same plot
-geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
-hold(g,'off')
+% uif = uifigure('Name', 'Vehicle Trajectory');
+% g = geoglobe(uif);
+% 
+% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
+% hold(g,'on') % retains plot so that new plots can be added to the same plot
+% geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
+% hold(g,'off')
 
 %% Euler Angles
 % eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
@@ -392,6 +382,9 @@ hold(g,'off')
 
 figure('Name', 'Target Position');
 plot3(position_target_ECEF(:,1), position_target_ECEF(:,2), position_target_ECEF(:,3),'linewidth', 2);
+hold on
+plot3(xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)','linewidth', 2);
 title('Target')
+legend('Target', 'Missile')
 grid on
 hold off
