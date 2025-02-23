@@ -3,6 +3,7 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
     %% for rotation matrix
     r_ecef = [x(inds.px_ecef); x(inds.py_ecef); x(inds.pz_ecef)];
     quat = [x(inds.qw), x(inds.qx), x(inds.qy), x(inds.qz)];
+    w = [x(inds.w_ib_x), x(inds.w_ib_y), x(inds.w_ib_z)];
     lla = ecef2lla(r_ecef', 'WGS84');
     lat = lla(1);
     lon = lla(2);
@@ -67,29 +68,26 @@ function canardInput = AccelerationController_PID(x, accel_ecef, desiredAccelera
 
     H = CL_delta * q_inf * S;
 
-    % A = [d -d  d -d; 
-    %      r  0 -r  0;
-    %      0 -r  0  r];
-    % 
-    % b = [T_x/H; T_y/H; T_z/H];
-
-    % A = [kins.canard.z_cp_13, kins.canard.y_cp_24, kins.canard.z_cp_13, kins.canard.y_cp_24;
-    %  kins.canard.x_cp,   -kins.canard.x_cp,    0,  0;
-    %  0,  0,   kins.canard.x_cp,  -kins.canard.x_cp];
-
     C_p = (kins.diameter/2) + (kins.canard.height/2);
 
-    A = [
-        C_p/kins.I_x -C_p/kins.I_x C_p/kins.I_x -C_p/kins.I_x;
-        kins.x_cp/kins.I_y 0 -kins.x_cp/kins.I_y 0;
-        0 -kins.x_cp/kins.I_z 0 kins.x_cp/kins.I_z;
-    ];
+%     A = [
+%         C_p/kins.I_x -C_p/kins.I_x C_p/kins.I_x -C_p/kins.I_x;
+%         kins.x_cp/kins.I_y 0 -kins.x_cp/kins.I_y 0;
+%         0 -kins.x_cp/kins.I_z 0 kins.x_cp/kins.I_z;
+%     ];
+% 
+%     % Compute b vector
+%     b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)) * ...
+%         [0; 
+%          accel_B(2); 
+%          accel_B(3)];
 
-    % Compute b vector
-    b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)) * ...
-        [0; 
-         accel_B(2); 
-         accel_B(3)];
+A = [1 -1 1 -1;
+     1 0 -1 0;
+     0 -1 0 1];
+b = [0*kins.I_x/(C_p*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)      *(accel_B(1)+v_inf*(kins.I_z-kins.I_y)*w(2)*w(3)/kins.I_x);
+     kins.I_y/(kins.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(accel_B(2)+v_inf*(kins.I_x-kins.I_z)*w(1)*w(3)/kins.I_y);
+     kins.I_z/(kins.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(accel_B(3)+v_inf*(kins.I_y-kins.I_x)*w(2)*w(1)/kins.I_z)];
 
     cmd = pinv(A) * b;
 

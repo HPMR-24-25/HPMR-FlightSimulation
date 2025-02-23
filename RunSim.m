@@ -182,7 +182,7 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 20)
-        accel_cmd_B = [0; 10; 0];
+        accel_cmd_B = [0; 3; 0];
         accel_cmd_ecef = R_EB * accel_cmd_B;
         % accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
         
@@ -194,10 +194,10 @@ while(currLLA(3) >= -5)
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;
 
-        % canardInput.d1 = deg2rad(0);
-        % canardInput.d2 = deg2rad(0);
-        % canardInput.d3 = deg2rad(0);
-        % canardInput.d4 = deg2rad(0);
+%         canardInput.d1 = deg2rad(2);
+%         canardInput.d2 = deg2rad(-2);
+%         canardInput.d3 = deg2rad(2);
+%         canardInput.d4 = deg2rad(-2);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -251,16 +251,16 @@ while(currLLA(3) >= -5)
     [~, accel_ecef] = MissileDynamicModel(x_out(end, :)', t, canardInput, AeroModel, MotorModel, const, kins, inds);
 
     accelRecord(:, colNum) = accel_ecef;
-    accelRecordB(:, colNum) = R_EB*accel_ecef;
+    accelRecordB(:, colNum) = R_EB'*accel_ecef;
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 
     %% Visualize Quaternion
-    q = quaternion(x_t(inds.q)');
-
-    poseplot(q, [0,0,0]);
-
-    drawnow;
+%     q = quaternion(x_t(inds.q)');
+% 
+%     poseplot(q, [0,0,0]);
+% 
+%     drawnow;
 
 end
 
@@ -282,6 +282,14 @@ position_target_ECEF = [xRecord_target(1, :)', xRecord_target(2, :)', xRecord_ta
 
 %% Euler Angles
 eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
+% eulHist = q_to_ypr(xRecord(1:4, :)');
+% for i = 1:20001
+%     if isnan(xRecord(1:4, i))
+%         break
+%     else 
+%         eulHist(i,:) = q_to_ypr(xRecord(1:4, i)');
+%     end
+% end
 
 yawHist   = rad2deg(eulHist(:,1));
 pitchHist = rad2deg(eulHist(:,2));
@@ -289,10 +297,10 @@ rollHist  = rad2deg(eulHist(:,3));
 
 % Plot
 figure('Name', 'Orientation');
-plot(tRecord(:), yawHist);
+plot(tRecord(1:length(eulHist)), yawHist);
 hold on;
-plot(tRecord(:), pitchHist);
-plot(tRecord(:), rollHist);
+plot(tRecord(1:length(eulHist)), pitchHist);
+plot(tRecord(1:length(eulHist)), rollHist);
 hold off;
 title("Euler Angles");
 legend('Yaw', 'Pitch', 'Roll');
@@ -359,6 +367,7 @@ ylabel("Acceleration");
 xlabel("Time (s)");
 grid on;
 legend('x', 'y', 'z');
+xlim([4 20])
 
 % figure('Name', 'Target Position');
 % subplot(3,1,1);
