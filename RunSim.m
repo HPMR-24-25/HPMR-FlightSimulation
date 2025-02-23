@@ -155,6 +155,67 @@ accelRecordB(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
 colNum = numSteadyPts;
 
+<<<<<<< HEAD
+=======
+%% Initialize Live Plots
+% Orientation plot with position
+figure('Name', 'Missile Pose');
+% Set up Pose Plot
+ax = gca;
+pose = poseplot(ax);
+pose.Orientation = quaternion(x_t(inds.q)');
+grid on;
+axis equal;
+xlabel('X (m)');
+ylabel('Y (m)');
+zlabel('Z (m)');
+title('Missile Orientation');
+
+% Flight Monitor Window
+figure('Name', 'Flight Data Monitoring');
+subplot(2,2,1);
+altitudePlot = plot(nan, nan, 'r');
+title('Altitude Vs. Time');
+ylabel('Altitude (m)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(2,2,3);
+velocityPlot = plot(nan, nan, 'r');
+title('Velocity Vs. Time');
+ylabel('Velocity (m/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,2,2);
+omegaXPlot = plot(nan, nan, 'r');
+title('Angular Velocity P (Roll Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,2,4);
+omegaYPlot = plot(nan, nan, 'g');
+title('Angular Velocity Q (Pitch Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,2,6);
+omegaZPlot = plot(nan, nan, 'b');
+title('Angular Velocity R (Yaw Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+
+%% Run Simulation
+>>>>>>> parent of 63586bf (I am a genious, we speed now)
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
@@ -256,12 +317,26 @@ while(currLLA(3) >= -5)
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
 
     %% Visualize Quaternion
+<<<<<<< HEAD
 %     q = quaternion(x_t(inds.q)');
 % 
 %     poseplot(q, [0,0,0]);
 % 
 %     drawnow;
 
+=======
+    lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
+
+    % Update Graphs
+    set(pose, 'Orientation', quaternion(x_t(inds.q)'));
+    set(altitudePlot, 'XData', tRecord, 'YData', lla(:, 3)); % Altitude vs Time
+    set(velocityPlot, 'XData', tRecord, 'YData', vecnorm(xRecord(inds.vel, :))); % Velocity vs Time
+    set(omegaXPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_x,:)); % Angular Vel X
+    set(omegaYPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_y,:)); % Angular Vel Y
+    set(omegaZPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_z,:)); % Angular Vel Z
+
+    drawnow;
+>>>>>>> parent of 63586bf (I am a genious, we speed now)
 end
 
 %% Plot Vehicle Trajectory
