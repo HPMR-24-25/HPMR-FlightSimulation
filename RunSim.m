@@ -44,14 +44,14 @@ launch_ECEF_m = lla2ecef(launchLLA);
 accel_ecef = [0; 0; 0];
 
 %% Target Initialization
-% targetLat = 42.33599546; % [deg] Latitude
-% targetLon = -71.8098593; % [deg] Longitude
-% targetAlt = 4752; % [m] Altitude MSL
-% 
-% targetLLA = [targetLat, targetLon, targetAlt];
-% currTargetLLA = targetLLA;
+targetLat = 42.33599546; % [deg] Latitude
+targetLon = -71.8098593; % [deg] Longitude
+targetAlt = 4752; % [m] Altitude MSL
 
-target_ECEF = launch_ECEF_m+100;
+targetLLA = [targetLat, targetLon, targetAlt];
+currTargetLLA = targetLLA;
+
+target_ECEF = lla2ecef(targetLLA);
 
 %% Attitude Initialization
 roll_0 = deg2rad(0);
@@ -283,13 +283,13 @@ lla_target = ecef2lla([xRecord_target(2, :)', xRecord_target(3, :)', xRecord_tar
 position_target_ECEF = [xRecord_target(2, :)', xRecord_target(3, :)', xRecord_target(4, :)'];
 
 % Create a geoglobe
-% uif = uifigure('Name', 'Vehicle Trajectory');
-% g = geoglobe(uif);
-% 
-% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
-% hold(g,'on') % retains plot so that new plots can be added to the same plot
-% geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
-% hold(g,'off')
+uif = uifigure('Name', 'Vehicle Trajectory');
+g = geoglobe(uif);
+
+geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
+hold(g,'on') % retains plot so that new plots can be added to the same plot
+geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
+hold(g,'off')
 
 %% Euler Angles
 % eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
@@ -380,11 +380,11 @@ position_target_ECEF = [xRecord_target(2, :)', xRecord_target(3, :)', xRecord_ta
 % legend('x', 'y', 'z');
 % xlim([4 20])
 
-figure('Name', 'Target Position');
-plot3(position_target_ECEF(:,1), position_target_ECEF(:,2), position_target_ECEF(:,3),'linewidth', 2);
-hold on
-plot3(xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)','linewidth', 2);
-title('Target')
-legend('Target', 'Missile')
-grid on
-hold off
+% figure('Name', 'Target Position');
+% plot3(position_target_ECEF(:,1), position_target_ECEF(:,2), position_target_ECEF(:,3),'linewidth', 2);
+% hold on
+% plot3(xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)','linewidth', 2);
+% title('Target')
+% legend('Target', 'Missile')
+% grid on
+% hold off
