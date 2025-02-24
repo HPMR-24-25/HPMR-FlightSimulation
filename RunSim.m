@@ -134,7 +134,9 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 cmdHist = zeros(4, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
 stateBuffer = nan(size(accel_ecef, 1), 2);
+Canard_Buffer = nan(4, 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
+canardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
 
 %% Fill steady state data for set period of time (Simulate Launcher)
 steadyStateDuration = 5; % [s]
@@ -168,6 +170,10 @@ while(currLLA(3) >= -5)
     stateBuffer(:, 2) = stateBuffer(:, 1);
     stateBuffer(:, 1) = accel_ecef;
 
+    % Update Canard buffer with the latest state; shift older states
+    Canard_Buffer(:, 2) = Canard_Buffer(:, 1);
+    Canard_Buffer(:, 1) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
+
     %% ECEF to Body
     r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
     quat = [x_t(inds.qw), x_t(inds.qx), x_t(inds.qy), x_t(inds.qz)];
@@ -188,7 +194,7 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 20)
-        accel_cmd_B = [0; 3; 0];
+        accel_cmd_B = [0; 10; 0];
         accel_cmd_ecef = R_EB * accel_cmd_B;
         % accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
         
@@ -196,14 +202,15 @@ while(currLLA(3) >= -5)
         % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
         % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
         %canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
+        canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
 
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
-        %canardInput = canardTargetInput;
+        canardInput = canardTargetInput;
 
-        canardInput.d1 = deg2rad(0);
-        canardInput.d2 = deg2rad(0);
-        canardInput.d3 = deg2rad(0);
-        canardInput.d4 = deg2rad(0);
+%         canardInput.d1 = deg2rad(0);
+%         canardInput.d2 = deg2rad(0);
+%         canardInput.d3 = deg2rad(0);
+%         canardInput.d4 = deg2rad(0);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -265,11 +272,11 @@ while(currLLA(3) >= -5)
     accel_cmd(:,colNum) = TrueProNav(x_t, xRecord_target(:,colNum), 3, aT);
 
     %% Visualize Quaternion
-%     q = quaternion(x_t(inds.q)');
-% 
-%     poseplot(q, [0,0,0]);
-% 
-%     drawnow;
+    q = quaternion(x_t(inds.q)');
+
+    poseplot(q, [0,0,0]);
+
+    drawnow;
 
 end
 
@@ -282,14 +289,14 @@ lla_target = ecef2lla([xRecord_target(2, :)', xRecord_target(3, :)', xRecord_tar
 
 position_target_ECEF = [xRecord_target(2, :)', xRecord_target(3, :)', xRecord_target(4, :)'];
 
-% Create a geoglobe
-uif = uifigure('Name', 'Vehicle Trajectory');
-g = geoglobe(uif);
-
-geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
-hold(g,'on') % retains plot so that new plots can be added to the same plot
-geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
-hold(g,'off')
+% % Create a geoglobe
+% uif = uifigure('Name', 'Vehicle Trajectory');
+% g = geoglobe(uif);
+% 
+% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
+% hold(g,'on') % retains plot so that new plots can be added to the same plot
+% geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
+% hold(g,'off')
 
 %% Euler Angles
 % eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
@@ -361,24 +368,24 @@ hold(g,'off')
 % grid on;
 % legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
 
-% %% Acceleration ECEF
-% figure('Name', 'Acceleration');
-% plot(tRecord(:), accelRecord);
-% title('Acceleration ECEF');
-% ylabel("Acceleration");
-% xlabel("Time (s)");
-% grid on;
-% legend('x', 'y', 'z');
-% 
-% %% Acceleration Body
-% figure('Name', 'Acceleration');
-% plot(tRecord(:), accelRecordB);
-% title('Acceleration Body');
-% ylabel("Acceleration");
-% xlabel("Time (s)");
-% grid on;
-% legend('x', 'y', 'z');
-% xlim([4 20])
+%% Acceleration ECEF
+figure('Name', 'Acceleration');
+plot(tRecord(:), accelRecord);
+title('Acceleration ECEF');
+ylabel("Acceleration");
+xlabel("Time (s)");
+grid on;
+legend('x', 'y', 'z');
+
+%% Acceleration Body
+figure('Name', 'Acceleration');
+plot(tRecord(:), accelRecordB);
+title('Acceleration Body');
+ylabel("Acceleration");
+xlabel("Time (s)");
+grid on;
+legend('x', 'y', 'z');
+xlim([4 20])
 
 % figure('Name', 'Target Position');
 % plot3(position_target_ECEF(:,1), position_target_ECEF(:,2), position_target_ECEF(:,3),'linewidth', 2);
