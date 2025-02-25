@@ -28,7 +28,7 @@ function ModelData = initRocketAeroModel()
     % <<< Guesstimated Values >>>
 
     % Canard Lift Force Deflection Coefficient
-    ModelData.canard.CL_delta = 5.5;
+    ModelData.canard.CL_delta = 0.12;
 
     % Aerodynamic Restoring Moment Coefficients
     ModelData.damping.Cd_x = 0.3;

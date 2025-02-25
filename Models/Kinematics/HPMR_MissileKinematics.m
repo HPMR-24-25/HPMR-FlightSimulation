@@ -1,4 +1,4 @@
-function kins = HPMR_ModelRocketKinematics()
+function kins = HPMR_MissileKinematics()
 
 kins.x_cp = 9 / 39.37; % [m] Longitudinal center of pressure distance
 kins.I_x = 0.044;  % [kg/m^2]

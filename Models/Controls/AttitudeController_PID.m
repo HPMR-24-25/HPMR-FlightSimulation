@@ -1,4 +1,4 @@
-function [canardInput, T] = AttitudeController_PID(x, desiredAttitude, P, I, D, dt, kins, inds, AeroModel)
+function [canardInput, T, err] = AttitudeController_PID(x, desiredAttitude, P, I, D, dt, kins, inds, AeroModel)
 
     eulBuff = quat2eul(x(inds.q, :)', 'ZYX');
     yawBuff = eulBuff(:, 1);
@@ -24,13 +24,14 @@ function [canardInput, T] = AttitudeController_PID(x, desiredAttitude, P, I, D, 
     T_y = err_pitch * P + err_pitch_int * I + err_pitch_d * D;
 
     % Yaw Controller
-    err_pitch = yawCmd - yawBuff(2);
-    err_pitch_d = ((yawCmd - yawBuff(2)) - (yawCmd - yawBuff(1))) / dt;
-    err_pitch_int = ((yawCmd - yawBuff(2)) - (yawCmd - yawBuff(1))) * dt;
+    err_yaw = yawCmd - yawBuff(2);
+    err_yaw_d = ((yawCmd - yawBuff(2)) - (yawCmd - yawBuff(1))) / dt;
+    err_yaw_int = ((yawCmd - yawBuff(2)) - (yawCmd - yawBuff(1))) * dt;
 
-    T_z = err_pitch * P + err_pitch_int * I + err_pitch_d * D;
+    T_z = err_yaw * P + err_yaw_int * I + err_yaw_d * D;
 
     T = [T_x; T_y; T_z];
+    err = [err_yaw; err_pitch; err_roll];
 
     lla = ecef2lla(x(inds.pos),"wgs84");
     alt = lla(3);
