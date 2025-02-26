@@ -22,6 +22,9 @@ simPaths = {
     %% Controls
     fullfile('Controls')
 
+    %% Guidance
+    fullfile('Guidance')
+
     %% Utilities
     fullfile('Utils');
     
