@@ -24,12 +24,17 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     a = sqrt(const.gamma_air*const.R_air*atmo.getTemperature()); % [m/s] Speed of sound at state
 
-    v_ecef = [x(inds.vx_ecef); x(inds.vy_ecef); x(inds.vz_ecef)]; % [m/s] Velocity vector in ECEF
+    v_b_ecef = [x(inds.vx_ecef); x(inds.vy_ecef); x(inds.vz_ecef)]; % [m/s] Velocity vector in ECEF
+
+    % Relative airspeed
+    V_wind_ECEF = WindModel(x, inds);
+    % V_wind_ECEF = [0; 0; 0];
+
+    v_ecef = v_b_ecef - V_wind_ECEF;
 
     M = norm(v_ecef) / a; % Mach Number
 
     %% Rotation Matrix Setup
-
     R_ET = [
         -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
         -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
@@ -40,6 +45,8 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     R_EB = R_ET * R_TB;
 
+    V_wind_B = R_EB' * V_wind_ECEF;
+
     %% Unit Vector Calculation
 
     v_hat_ecef = v_ecef / norm(v_ecef); % [1] Unit Vector of Velocity in ECEF
@@ -47,6 +54,8 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     v_hat_B = R_EB' * v_hat_ecef; % [1] Unit Vector of Velocity in Body
 
     AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
+
+    beta = atan2(v_hat_B(2), v_hat_B(1));
 
     %% Missile Body Drag
 
@@ -89,27 +98,26 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     %% Canard Forces and Moments
     % Canard-induced lift forces and moments
-    L_c_1 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d1; 
-    L_c_2 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d2;
-    L_c_3 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d3;
-    L_c_4 = q_inf * kins.canard.S * AeroModel.canard.CL_delta * canardInput.d4;
-
-    M_1_y = kins.canard.x_cp * L_c_1;
-    M_2_y = -kins.canard.x_cp * L_c_2;
-    M_3_z = kins.canard.x_cp * L_c_3;
-    M_4_z = -kins.canard.x_cp * L_c_4;
-
-    M_1_x = kins.canard.z_cp_13 * L_c_1;
-    M_2_x = kins.canard.y_cp_24 * L_c_2;
-    M_3_x = kins.canard.z_cp_13 * L_c_3;
-    M_4_x = kins.canard.y_cp_24 * L_c_4;
-
-    F_x_B = 0;
-    F_y_B = L_c_1 + L_c_3;
-    F_z_B = L_c_2 + L_c_4;
+    F_x_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4);
+    F_y_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3);
+    F_z_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2);
     F_c_B = [F_x_B; F_y_B; F_z_B];
 
     F_c_ECEF = R_EB * F_c_B;
+
+    % Compute wind force coefficient (Cy_wind) based on sideslip angle (beta)
+    Cy_wind = 0.2 * beta;
+    
+    % Apply threshold to avoid wind force at low velocity
+    if norm(v_ecef) < 15
+        Cy_wind = 0;
+    end
+    
+    % Compute wind-induced force in body frame
+    F_wind_B = q_inf * Cy_wind * kins.S * [-v_hat_B(2); 0; v_hat_B(1)];
+    
+    % Compute the wind-induced moment using the cross product (correct approach)
+    M_wind_B = cross([kins.x_cp; 0; 0], F_wind_B);
 
     %% Damping Moments
     % Damping moments (proportional to angular velocities)
@@ -119,9 +127,20 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_damp_z = -AeroModel.damping.Cd_z * q_inf * kins.S * kins.x_cp * x(inds.w_ib_z);
 
     %% Total Moments
-    M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
-    M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
-    M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
+    % M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x + M_wind_B(1); % Roll moment with damping
+    % M_y_b = M_1_y + M_2_y + M_damp_y + M_wind_B(2); % Pitch moment with damping
+    % M_z_b = M_3_z + M_4_z + M_damp_z + M_wind_B(3); % Yaw moment with damping
+    % M_x_b = M_1_x + M_2_x + M_3_x + M_4_x + M_damp_x; % Roll moment with damping
+    % M_y_b = M_1_y + M_2_y + M_damp_y; % Pitch moment with damping
+    % M_z_b = M_3_z + M_4_z + M_damp_z; % Yaw moment with damping
+
+    C_p = (kins.diameter/2) + (kins.canard.height/2);
+
+    M_x_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4) * C_p + M_damp_x + M_wind_B(1);
+    M_y_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3) * kins.canard.x_cp + M_damp_y + M_wind_B(2);
+    M_z_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2) * kins.canard.x_cp + M_damp_z + M_wind_B(3);
+
+    M_b = [M_x_b; M_y_b; M_z_b];
 
     %% Angular Accelerations
     % dw_ib_x = M_x_b / kins.I_x;
@@ -130,12 +149,23 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     dw_ib = kins.I \ (cross(x(inds.w_ib), (kins.I * x(inds.w_ib))) + [M_x_b; M_y_b; M_z_b]);
 
     %% Quaternion Update
+    % q_dot = 0.5 * [
+    %      x(1), -x(2), -x(3), -x(4);
+    %      x(2),  x(1),  x(4), -x(3);
+    %      x(3), -x(4),  x(1),  x(2);
+    %      x(4),  x(3), -x(2),  x(1)
+    % ] * [0; x(inds.w_ib_x); x(inds.w_ib_y); x(inds.w_ib_z)];
+
     q_dot = 0.5 * [
-        -x(2), -x(3), -x(4);
-         x(1), -x(4),  x(3);
-         x(4),  x(1), -x(2);
-        -x(3),  x(2),  x(1);
-    ] * [x(inds.w_ib_x); x(inds.w_ib_y); x(inds.w_ib_z)];
+        -x(2) -x(3) -x(4);
+        x(1) -x(4) x(3);
+        x(4) x(1) -x(2);
+        -x(3) x(2) x(1);
+    ] * x(inds.w_ib);
+    
+    if(t >= 10)
+        disp("");
+    end
 
     %% Position Dynamics
     vx_dot = (D_ECEF(1) + L_ECEF(1) + T_ECEF(1) + F_c_ECEF(1)) / x(inds.mass) + gx_E;

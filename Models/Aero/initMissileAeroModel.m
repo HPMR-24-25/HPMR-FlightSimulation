@@ -28,10 +28,16 @@ function ModelData = initMissileAeroModel()
     % <<< Guesstimated Values >>>
 
     % Canard Lift Force Deflection Coefficient
-    ModelData.canard.CL_delta = 5.5;
+    ModelData.canard.CL_delta = 0.2;
+
+    % canard.machNumbers = [0.01, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5];
+    % canard.clDelta = [0.000486; 0.000191; 0.000366; 0.000590; 0.000630; 0.000625; 0.004214; 0.000582];
 
     % Aerodynamic Restoring Moment Coefficients
-    ModelData.damping.Cd_x = 0.3;
-    ModelData.damping.Cd_y = 0.5;
-    ModelData.damping.Cd_z = 0.5;
+    ModelData.damping.Cd_x = 0.1;
+    ModelData.damping.Cd_y = 0.3;
+    ModelData.damping.Cd_z = 0.3;
+
+    % Good estimate is C_n * sideslip angle
+    ModelData.Cy_wind = 0.4;
 end
