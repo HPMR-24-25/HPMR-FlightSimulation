@@ -25,6 +25,16 @@ function ModelData = initRocketAeroModel()
     ModelData.CdLookup = @(inputMach, inputAoA) CD_lookup(inputMach, inputAoA);
     ModelData.ClLookup = @(inputMach, inputAoA) CL_lookup(inputMach, inputAoA);
 
+    % Normal Force Coefficients
+
+    Cn_Mach = [0.1 0.5 1.1 2.0 5.0, 0.1 0.5 1.1 2.0 5.0, 0.1 0.5 1.1 2.0 5.0, 0.1 0.5 1.1 2.0 5.0]';
+    Cn_AoA  = [0 0 0 0 0, 4 4 4 4 4, 8 8 8 8 8, 12 12 12 12 12]';
+    Cn_table = [0 0 0 0 0, 2 2 3 2 0.8, 4 4 6.25 3.8 2.5, 6 6 9.25 6 4]';
+
+    CN_lookup = scatteredInterpolant(Cn_Mach, Cn_AoA, Cn_table, 'linear', 'none');
+
+    ModelData.CnLookup = @(inputMach, inputAoA) max(0, CN_lookup(inputMach, inputAoA) * ~isnan(CN_lookup(inputMach, inputAoA)));
+
     % <<< Guesstimated Values >>>
 
     % Canard Lift Force Deflection Coefficient

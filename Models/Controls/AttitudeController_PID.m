@@ -1,90 +1,65 @@
-function [canardInput, T, err] = AttitudeController_PID(x, desiredAttitude, P, I, D, dt, kins, inds, AeroModel)
+function [canardInput, T, err] = AttitudeController_PID(x, desiredQuat, GAIN_1, GAIN_2, dt, kins, inds, AeroModel)
 
-    eulBuff = quat2eul(x(inds.q, :)', 'ZYX');
-    yawBuff = eulBuff(:, 1);
-    pitchBuff = eulBuff(:, 2);
-    rollBuff = eulBuff(:, 3);
+    % Extract current quaternion and angular velocity
+    q = x(inds.q, 1);    % Current attitude quaternion
+    omega = x(inds.w_ib, 1); % Angular velocity in body frame
 
-    rollCmd = desiredAttitude(1);
-    pitchCmd = desiredAttitude(2);
-    yawCmd = desiredAttitude(3);
+    % Compute quaternion error
+    q_err = quatmultiply(quatinv(desiredQuat'), q'); % Error quaternion
 
-    % Roll Controller
-    err_roll = rollCmd - rollBuff(2);
-    err_roll_d = ((rollCmd - rollBuff(2)) - (rollCmd - rollBuff(1))) / dt;
-    err_roll_int = ((rollCmd - rollBuff(2)) - (rollCmd - rollBuff(1))) * dt;
+    % Convert quaternion error to rotation vector (small angle approximation)
+    q_vec = q_err(2:4)'; % Extract vector part of quaternion
+    err = 2 * q_vec .* sign(q_err(1)); % Ensure shortest rotation path
 
-    T_x = err_roll * P + err_roll_int * I + err_roll_d * D;
+    % Integral term with anti-windup
+    persistent err_int
+    if isempty(err_int)
+        err_int = [0; 0; 0];
+    end
+    err_int = max(-1, min(1, err_int + err * dt)); % Clamping integral to prevent windup
 
-    % Pitch Controller
-    err_pitch = pitchCmd - pitchBuff(2);
-    err_pitch_d = ((pitchCmd - pitchBuff(2)) - (pitchCmd - pitchBuff(1))) / dt;
-    err_pitch_int = ((pitchCmd - pitchBuff(2)) - (pitchCmd - pitchBuff(1))) * dt;
+    % Compute control torques (P + I + D)
+    T_x = GAIN_1(1) * err(1) + GAIN_1(2) * err_int(1) - GAIN_1(3) * omega(1);
+    T_y = GAIN_2(1) * err(2) + GAIN_2(2) * err_int(2) - GAIN_2(3) * omega(2);
+    T_z = GAIN_2(1) * err(3) + GAIN_2(2) * err_int(3) - GAIN_2(3) * omega(3);
 
-    T_y = err_pitch * P + err_pitch_int * I + err_pitch_d * D;
-
-    % Yaw Controller
-    err_yaw = yawCmd - yawBuff(2);
-    err_yaw_d = ((yawCmd - yawBuff(2)) - (yawCmd - yawBuff(1))) / dt;
-    err_yaw_int = ((yawCmd - yawBuff(2)) - (yawCmd - yawBuff(1))) * dt;
-
-    T_z = err_yaw * P + err_yaw_int * I + err_yaw_d * D;
-
+    % Store torque outputs
     T = [T_x; T_y; T_z];
-    err = [err_yaw; err_pitch; err_roll];
 
-    lla = ecef2lla(x(inds.pos),"wgs84");
+    % --- Atmospheric Model ---
+    lla = ecef2lla(x(inds.pos), "wgs84");
     alt = lla(3);
     AtmosphericModel(alt);
 
-    d = kins.diameter;
-    r = kins.x_cp;
+    % --- Aerodynamic Parameters ---
     rho_inf = AtmosphericModel.rho_sl;
-    v_inf = norm(x(inds.vel, 2));
-    S = kins.S; 
-
-    CL_delta = AeroModel.canard.CL_delta;
-
+    v_inf = norm(x(inds.vel, 1));
     q_inf = 0.5 * rho_inf * v_inf^2;
 
-    H = CL_delta * q_inf * S;
+    C_p = (kins.diameter / 2) + (kins.canard.height / 2);
 
-    % A = [d -d  d -d; 
-    %      r  0 -r  0;
-    %      0 -r  0  r];
-    % 
-    % b = [T_x/H; T_y/H; T_z/H];
-
-    % A = [kins.canard.z_cp_13, kins.canard.y_cp_24, kins.canard.z_cp_13, kins.canard.y_cp_24;
-    %  kins.canard.x_cp,   -kins.canard.x_cp,    0,  0;
-    %  0,  0,   kins.canard.x_cp,  -kins.canard.x_cp];
-
-    C_p = (kins.diameter/2) + (kins.canard.height/2);
-
+    % --- Control Allocation Matrix ---
     A = [
         C_p -C_p C_p -C_p;
         0 kins.x_cp 0 -kins.x_cp;
         -kins.x_cp 0 kins.x_cp 0;
     ];
 
-    % Compute b vector
-    % b = [T_x; T_y; T_z];
-    b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta)) * ...
-        [T_x; 
-         T_y; 
-         T_z];
+    % Compute required control input
+    b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta)) * [T_x; T_y; T_z];
 
-    % cmd = b / A';
+    % Solve for canard deflections
     cmd = pinv(A) * b;
 
-    % canardInput.d1 = T_x;
-    % canardInput.d2 = T_x;
-    % canardInput.d3 = T_x;
-    % canardInput.d4 = T_x;
-
+    % Limit canard deflections
+    maxCanardDeflection = kins.canard.maxActuation;
     canardInput.d1 = cmd(1);
     canardInput.d2 = cmd(2);
     canardInput.d3 = cmd(3);
     canardInput.d4 = cmd(4);
+    % canardInput.d1 = max(-maxCanardDeflection, min(maxCanardDeflection, cmd(1)));
+    % canardInput.d2 = max(-maxCanardDeflection, min(maxCanardDeflection, cmd(2)));
+    % canardInput.d3 = max(-maxCanardDeflection, min(maxCanardDeflection, cmd(3)));
+    % canardInput.d4 = max(-maxCanardDeflection, min(maxCanardDeflection, cmd(4)));
 
 end

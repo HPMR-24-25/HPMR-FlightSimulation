@@ -58,7 +58,7 @@ roll_0 = deg2rad(1);
 pitch_0 = deg2rad(85);
 yaw_0 = deg2rad(0);
 
-q_0 = eul2quat(roll_0, pitch_0, yaw_0);
+q_0 = hpmr_eul2quat(roll_0, pitch_0, yaw_0);
 
 %$ Angular Rate Initialization
 w_ib_x = 0.00; % [rad/s]
@@ -140,7 +140,7 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 %% Guidance Storage
 cmdHist = zeros(4, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
-stateBuffer = nan(size(x_t, 1), 2);
+stateBuffer = nan(size(x_t, 1), 100);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
 attErr = zeros(3, numTimePts);
 
@@ -259,7 +259,7 @@ while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
     % Update buffer with the latest state; shift older states
-    stateBuffer(:, 2) = stateBuffer(:, 1);
+    stateBuffer(:, 2:end) = stateBuffer(:, 1:end-1); 
     stateBuffer(:, 1) = x_t;
 
     %% ECEF to Body
@@ -283,21 +283,23 @@ while(currLLA(3) >= -5)
     % Attempt to control roll between 4s and 8s
     if(t >= 4 && t <= 18)
 
-        rollCmd = deg2rad(35);
-        pitchCmd = deg2rad(70);
-        yawCmd = deg2rad(0);
-        
-        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 0.5, 0, 0, time.dt, kins, inds, AeroModel);
+        % rollCmd = deg2rad(15);
+        % pitchCmd = deg2rad(80);
+        % yawCmd = deg2rad(0);
 
+        desiredQuat = [0.7309698; 0.096234; 0.6698104; 0.0881822];
+
+        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, desiredQuat, [0.6; 0; 0], [0.6; 0; 0], time.dt, kins, inds, AeroModel);
+        % err = [0 0 0];
         attErr(:, colNum) = err;
 
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;
 
-        % canardInput.d1 = deg2rad(6);
-        % canardInput.d2 = deg2rad(-6);
-        % canardInput.d3 = deg2rad(6);
-        % canardInput.d4 = deg2rad(-6);
+        % canardInput.d1 = deg2rad(0);
+        % canardInput.d2 = deg2rad(0);
+        % canardInput.d3 = deg2rad(0);
+        % canardInput.d4 = deg2rad(0);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -386,21 +388,20 @@ end
 % lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 % 
 % %% Euler Angles
-% eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
+eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
 % 
-% yawHist   = rad2deg(eulHist(:,1));
-% pitchHist = rad2deg(eulHist(:,2));
-% rollHist  = rad2deg(eulHist(:,3));
-% 
-% % Plot
-% figure('Name', 'Orientation');
-% plot(tRecord(:), yawHist);
-% hold on;
-% plot(tRecord(:), pitchHist);
-% plot(tRecord(:), rollHist);
-% hold off;
-% title("Euler Angles");
-% legend('Yaw', 'Pitch', 'Roll');
+yawHist   = rad2deg(eulHist(:,1));
+pitchHist = rad2deg(eulHist(:,2));
+rollHist  = rad2deg(eulHist(:,3));
+
+figure('Name', 'Orientation');
+plot(tRecord(:), yawHist);
+hold on;
+plot(tRecord(:), pitchHist);
+plot(tRecord(:), rollHist);
+hold off;
+title("Euler Angles");
+legend('Yaw', 'Pitch', 'Roll');
 
 % Atitude Vs Downrange
 % downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);

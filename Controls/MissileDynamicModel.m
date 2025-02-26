@@ -35,7 +35,6 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M = norm(v_ecef) / a; % Mach Number
 
     %% Rotation Matrix Setup
-
     R_ET = [
         -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
         -sind(lat)*sind(lon),  cosd(lon), -cosd(lat)*sind(lon);
@@ -45,6 +44,8 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     R_TB = quat2rotm(quat);
 
     R_EB = R_ET * R_TB;
+
+    V_wind_B = R_EB' * V_wind_ECEF;
 
     %% Unit Vector Calculation
 
@@ -97,7 +98,6 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     %% Canard Forces and Moments
     % Canard-induced lift forces and moments
-
     F_x_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4);
     F_y_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3);
     F_z_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2);
@@ -106,7 +106,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     F_c_ECEF = R_EB * F_c_B;
 
     % Compute wind force coefficient (Cy_wind) based on sideslip angle (beta)
-    Cy_wind = 0.3 * beta;
+    Cy_wind = 0.2 * beta;
     
     % Apply threshold to avoid wind force at low velocity
     if norm(v_ecef) < 15
@@ -139,6 +139,8 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     M_x_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4) * C_p + M_damp_x + M_wind_B(1);
     M_y_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3) * kins.canard.x_cp + M_damp_y + M_wind_B(2);
     M_z_b = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2) * kins.canard.x_cp + M_damp_z + M_wind_B(3);
+
+    M_b = [M_x_b; M_y_b; M_z_b];
 
     %% Angular Accelerations
     % dw_ib_x = M_x_b / kins.I_x;

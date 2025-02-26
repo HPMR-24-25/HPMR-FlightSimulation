@@ -32,8 +32,8 @@ canard.y_cp_13   = 0;
 canard.z_cp_13   = canard.height / 2;
 canard.y_cp_24   = canard.height / 2;
 canard.z_cp_13   = 0;
-canard.maxActuationRate = 0.2; % [rad/s]
-canard.maxActuation     = deg2rad(10); % [deg]
+canard.maxActuationRate = 0.5; % [rad/s]
+canard.maxActuation     = deg2rad(15); % [deg]
 
 kins.canard = canard;
 
