@@ -1,25 +1,32 @@
-function canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time)
-% CONSTRAINMISSILEACTUATIONLIMTS - Constrain Canard Deflection
-% Applys structural and physical limits to the canard acutation system
+function canardInput = constrainMissileActuationLimits(x_t, canardTargetInput, prevCanardInput, kins, time)
+% CONSTRAINMISSILEACTUATIONLIMITS - Constrain Canard Deflection
+% Simulates physical constraints such as actuation rate and deflection limits
 
-    % Ensure canard commands do not exceed 360 degrees
-        canardInput.d1 = mod(canardTargetInput.d1, 2*pi);
-        canardInput.d2 = mod(canardTargetInput.d2, 2*pi);
-        canardInput.d3 = mod(canardTargetInput.d3, 2*pi);
-        canardInput.d4 = mod(canardTargetInput.d4, 2*pi);
+    % Maximum actuation range
+    maxActuation = kins.canard.maxActuation;
 
-        % Simulate actuation speed limitation for each canard
-        canardInput.d1 = prevCanardInput.d1 + sign(canardInput.d1 - prevCanardInput.d1) * ...
-                         min(kins.canard.maxActuationRate * time.dt, abs(canardTargetInput.d1 - prevCanardInput.d1));
-        canardInput.d2 = prevCanardInput.d2 + sign(canardInput.d2 - prevCanardInput.d2) * ...
-                         min(kins.canard.maxActuationRate * time.dt, abs(canardTargetInput.d2 - prevCanardInput.d2));
-        canardInput.d3 = prevCanardInput.d3 + sign(canardInput.d3 - prevCanardInput.d3) * ...
-                         min(kins.canard.maxActuationRate * time.dt, abs(canardTargetInput.d3 - prevCanardInput.d3));
-        canardInput.d4 = prevCanardInput.d4 + sign(canardInput.d4 - prevCanardInput.d4) * ...
-                         min(kins.canard.maxActuationRate * time.dt, abs(canardTargetInput.d4 - prevCanardInput.d4));
+    % Ensure target input stays within max deflection limits
+    canardTargetInput.d1 = max(-maxActuation, min(maxActuation, canardTargetInput.d1));
+    canardTargetInput.d2 = max(-maxActuation, min(maxActuation, canardTargetInput.d2));
+    canardTargetInput.d3 = max(-maxActuation, min(maxActuation, canardTargetInput.d3));
+    canardTargetInput.d4 = max(-maxActuation, min(maxActuation, canardTargetInput.d4));
 
-        canardInput.d1 = min(kins.canard.maxActuation, canardInput.d1);
-        canardInput.d2 = min(kins.canard.maxActuation, canardInput.d2);
-        canardInput.d3 = min(kins.canard.maxActuation, canardInput.d3);
-        canardInput.d4 = min(kins.canard.maxActuation, canardInput.d4);
+    % Compute maximum allowed change per time step
+    maxDelta = kins.canard.maxActuationRate * time.dt;
+
+    % Apply actuation speed limitation
+    canardInput.d1 = prevCanardInput.d1 + sign(canardTargetInput.d1 - prevCanardInput.d1) * ...
+                     min(maxDelta, abs(canardTargetInput.d1 - prevCanardInput.d1));
+    canardInput.d2 = prevCanardInput.d2 + sign(canardTargetInput.d2 - prevCanardInput.d2) * ...
+                     min(maxDelta, abs(canardTargetInput.d2 - prevCanardInput.d2));
+    canardInput.d3 = prevCanardInput.d3 + sign(canardTargetInput.d3 - prevCanardInput.d3) * ...
+                     min(maxDelta, abs(canardTargetInput.d3 - prevCanardInput.d3));
+    canardInput.d4 = prevCanardInput.d4 + sign(canardTargetInput.d4 - prevCanardInput.d4) * ...
+                     min(maxDelta, abs(canardTargetInput.d4 - prevCanardInput.d4));
+
+    % Ensure final values stay within limits
+    canardInput.d1 = max(-maxActuation, min(maxActuation, canardInput.d1));
+    canardInput.d2 = max(-maxActuation, min(maxActuation, canardInput.d2));
+    canardInput.d3 = max(-maxActuation, min(maxActuation, canardInput.d3));
+    canardInput.d4 = max(-maxActuation, min(maxActuation, canardInput.d4));
 end

@@ -1,10 +1,13 @@
-function kins = HPMR_ModelRocketKinematics()
+function kins = HPMR_MissileKinematics()
 
 kins.x_cp = 9 / 39.37; % [m] Longitudinal center of pressure distance
-kins.I_x = 0.044;  % [kg/m^2]
-kins.I_y = 11.834; % [kg/m^2]
-kins.I_z = 11.834; % [kg/m^2]
-kins.I = diag([kins.I_x, kins.I_y, kins.I_z]);
+% kins.I_x = 0.044;  % [kg/m^2]
+% kins.I_y = 11.834; % [kg/m^2]
+% kins.I_z = 11.834; % [kg/m^2]
+kins.I_x = 0.02069; % [kg/m^2]
+kins.I_y = 3.69984; % [kg/m^2]
+kins.I_z = 3.69984; % [kg/m^2]
+% kins.I = diag([kins.I_x, kins.I_y, kins.I_z]);
 kins.diameter = 4 / 39.37; % [m] Diameter (in -> m)
 kins.S = pi * (kins.diameter^2 / 4);
 kins.len = 98 / 39.37; % [m] Missile Length (in -> m)

@@ -8,7 +8,7 @@ function V_wind_ECEF = WindModel(x, inds)
     lon = lla(2);
     alt = lla(3);
 
-    V_wind_NED = [5; 5; 0] * (1 + 0.001 * alt);
+    V_wind_NED = [10; 10; 0] * (1 + 0.001 * alt);
 
     R_ET = [
         -sind(lat)*cosd(lon), -sind(lon), -cosd(lat)*cosd(lon);
