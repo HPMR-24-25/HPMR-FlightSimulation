@@ -75,22 +75,6 @@ Vz_E_0 = 1e-2; % [m/s]
 % Initial Mass
 m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
 
-%% Target Velocity Initialization
-V_NED_m = 482.26; %[m/s]
-psi = 0;
-Vx_target = V_NED_m*sin(psi); % [m/s]
-Vy_target = V_NED_m*cos(psi); % [m/s]
-Vz_target = 0; % [m/s]
-
-R_ET = [
-        -sind(targetLat)*cosd(targetLon), -sind(targetLon), -cosd(targetLat)*cosd(targetLon);
-        -sind(targetLat)*sind(targetLon),  cosd(targetLon), -cosd(targetLat)*sind(targetLon);
-         cosd(targetLat),                                0,                  -sind(targetLat)
-    ];
-
-V_target_NED = [Vx_target; Vy_target; Vz_target];
-
-V_target_ECEF = R_ET*V_target_NED;
 
 %% State Initialization
 x_0 = [
@@ -108,10 +92,22 @@ x_0 = [
 x_t = x_0;
 
 %% Target State Initialization
-x_0_target = [target_ECEF'; V_target_ECEF];
+% x_0_target = [beta; target_ECEF'; V_target_ECEF];
+% gravity
+g = 9.8;
+% initial target conditions
+Vt = 300;
+B = pi;
+Rtx_i = target_ECEF(1);
+Rty_i = target_ECEF(1);
+Rtz_i = target_ECEF(1);
+Vtx_i = Vt*cos(B);
+Vty_i = Vt*sin(B);
+Vtz_i = 0;
+aT = 3*g;
+x_0_target = [B; Rtx_i; Rty_i; Rtz_i; Vtx_i; Vty_i; Vtz_i];
 
 x_t_target = x_0_target;
-x_t_targetCircle = x_t_target;
 
 %% State Data Storage
 t = time.t0;
@@ -133,17 +129,17 @@ accelRecordB(:,1) = accel_ecef;
 xRecord_target = nan(length(x_0_target), numTimePts);
 xRecord_target(:,1) = x_t_target;
 
-xRecord_targetCircle = nan(length(x_0_target), numTimePts);
-xRecord_targetCircle(:,1) = x_t_targetCircle;
-
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
 %% Guidance Storage
 cmdHist = zeros(4, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
-stateBuffer = nan(size(x_t, 1), 20);
+accelBuffer = nan(size(accel_ecef, 1), 2);
+Canard_Buffer = nan(4, 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
+canardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
+stateBuffer = nan(size(x_t, 1), 20);
 attErr = zeros(3, numTimePts);
 
 %% Fill steady state data for set period of time (Simulate Launcher)
@@ -157,9 +153,21 @@ accelRecord(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 accelRecordB(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
 colNum = numSteadyPts;
+%% Target
+for i = 1:numTimePts
+
+    k1 = time.dt * TargetKinematicModel(t, x_t_target, aT);
+    k2 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k1, aT);
+    k3 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k2, aT);
+    k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
+    x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+
+
+    xRecord_target(:, i) = x_t_target;
+
+end
 
 %% Initialize Live Plots
-
 % Setup Video Writer
 % videoFile = 'MissileSimulation.mp4';
 % v = VideoWriter(videoFile, 'MPEG-4');
@@ -256,13 +264,17 @@ hold on;
 updateFrequency = 10;
 plotCounter = 0;
 
-%% Run Simulation
+%% Run Missile Simulation
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
     % Update buffer with the latest state; shift older states
     stateBuffer(:, 2:end) = stateBuffer(:, 1:end-1); 
     stateBuffer(:, 1) = x_t;
+
+    % Update Canard buffer with the latest state; shift older states
+    Canard_Buffer(:, 2) = Canard_Buffer(:, 1);
+    Canard_Buffer(:, 1) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
 
     %% ECEF to Body
     r_ecef = [x_t(inds.px_ecef); x_t(inds.py_ecef); x_t(inds.pz_ecef)];
@@ -282,8 +294,10 @@ while(currLLA(3) >= -5)
 
     R_EB = R_ET' * R_TB;
 
-    % Attempt to control roll between 4s and 8s
+    % Attempt to control roll between 4s and 18s
     if(t >= 4 && t <= 18)
+        accel_cmd_B = [0; 10; 0];
+        accel_cmd_ecef = R_EB * accel_cmd_B;
 
         rollCmd = deg2rad(0);
         pitchCmd = deg2rad(80);
@@ -291,11 +305,13 @@ while(currLLA(3) >= -5)
         eulCmd = [yawCmd; pitchCmd; rollCmd];
 
         [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.8, 0.1, 0], [1.8, 0.1, 0], time.dt, kins, inds, AeroModel);
+        %canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
+        
         % err = [0 0 0];
         attErr(:, colNum) = err;
-
+        
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
-        % canardInput = canardTargetInput;
+        canardInput = canardTargetInput;
 
         % canardInput.d1 = deg2rad(6);
         % canardInput.d2 = deg2rad(-6);
@@ -354,9 +370,12 @@ while(currLLA(3) >= -5)
     [~, accel_ecef] = MissileDynamicModel(x_out(end, :)', t, canardInput, AeroModel, MotorModel, const, kins, inds);
 
     accelRecord(:, colNum) = accel_ecef;
-    accelRecordB(:, colNum) = R_EB*accel_ecef;
+    accelRecordB(:, colNum) = R_EB'*accel_ecef;
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
+    
+    %% PUT PRONAV HERE
+    accel_cmd(:,colNum) = TrueProNav(x_t, xRecord_target(:,colNum), 3, aT);
     
     %% Live Plot Graph Update
     plotCounter = plotCounter + 1;
@@ -381,6 +400,7 @@ while(currLLA(3) >= -5)
         % frame = getframe(dataVis);
         % writeVideo(v, frame);
     end
+
 end
 
 % close(v);
@@ -413,29 +433,39 @@ legend('Yaw', 'Pitch', 'Roll');
 % xlabel("Downrange (m)");
 % grid on;
 
-%% Canard Command History
-figure('Name', 'Canard Angles');
-plot(tRecord(:), rad2deg(cmdHist));
-title('Canard Actuation');
-ylabel("Actuation (deg)");
+% %% Canard Command History
+% figure('Name', 'Canard Angles');
+% plot(tRecord(:), rad2deg(cmdHist));
+% title('Canard Actuation');
+% ylabel("Actuation (deg)");
+% xlabel("Time (s)");
+% grid on;
+% legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
+
+%% Acceleration ECEF
+figure('Name', 'Acceleration');
+plot(tRecord(:), accelRecord);
+title('Acceleration ECEF');
+ylabel("Acceleration");
 xlabel("Time (s)");
 grid on;
-legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
+legend('x', 'y', 'z');
 
-% %% Acceleration ECEF
-% figure('Name', 'Acceleration');
-% plot(tRecord(:), accelRecord);
-% title('Acceleration ECEF');
-% ylabel("Acceleration");
-% xlabel("Time (s)");
-% grid on;
-% legend('x', 'y', 'z');
-% 
-% %% Acceleration Body
-% figure('Name', 'Acceleration');
-% plot(tRecord(:), accelRecordB);
-% title('Acceleration Body');
-% ylabel("Acceleration");
-% xlabel("Time (s)");
-% grid on;
-% legend('x', 'y', 'z');
+%% Acceleration Body
+figure('Name', 'Acceleration');
+plot(tRecord(:), accelRecordB);
+title('Acceleration Body');
+ylabel("Acceleration");
+xlabel("Time (s)");
+grid on;
+legend('x', 'y', 'z');
+xlim([4 20])
+
+% figure('Name', 'Target Position');
+% plot3(position_target_ECEF(:,1), position_target_ECEF(:,2), position_target_ECEF(:,3),'linewidth', 2);
+% hold on
+% plot3(xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)','linewidth', 2);
+% title('Target')
+% legend('Target', 'Missile')
+% grid on
+% hold off
