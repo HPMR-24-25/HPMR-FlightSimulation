@@ -30,7 +30,7 @@ function canardInput = Accel2Canard(x, accel_cmd_ecef, kins, inds, AeroModel)
 
     C_p = (kins.diameter/2) + (kins.canard.height/2);
 
-    K = 1; %some kind of gain
+    K = 3; %some kind of gain
 
     A = [1 -1 1 -1;
          1 0 -1 0;

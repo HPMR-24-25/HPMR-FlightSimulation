@@ -6,15 +6,15 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-% kins = HPMR_MissileKinematics();
-kins = HPMR_ModelRocketKinematics();
+kins = HPMR_MissileKinematics();
+% kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-% AeroModel = initMissileAeroModel();
-AeroModel = initRocketAeroModel();
+AeroModel = initMissileAeroModel();
+% AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
@@ -44,8 +44,8 @@ launch_ECEF_m = lla2ecef(launchLLA);
 accel_ecef = [0; 0; 0];
 
 %% Target Initialization
-targetLat = 42.33599546; % [deg] Latitude
-targetLon = -71.8098593; % [deg] Longitude
+targetLat = 42.43599546; % [deg] Latitude
+targetLon = -71.7098593; % [deg] Longitude
 targetAlt = 4752; % [m] Altitude MSL
 
 targetLLA = [targetLat, targetLon, targetAlt];
@@ -389,7 +389,7 @@ while(currLLA(3) >= -5)
     % range
     Rtp = sqrt(Rtpx^2+Rtpy^2+Rtpz^2);
 
-    Rtp_record(:, colNum) = Rtp;
+    Rtp_record(colNum) = Rtp;
     
     %% Live Plot Graph Update
     plotCounter = plotCounter + 1;
