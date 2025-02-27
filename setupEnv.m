@@ -19,6 +19,9 @@ simPaths = {
     % Kinematics
     fullfile('Models', 'Kinematics')
 
+    %% Guidance
+    fullfile('Guidance')
+
     %% Controls
     fullfile('Controls')
 

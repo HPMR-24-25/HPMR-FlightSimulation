@@ -6,15 +6,15 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-% kins = HPMR_MissileKinematics();
-kins = HPMR_ModelRocketKinematics();
+kins = HPMR_MissileKinematics();
+% kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-% AeroModel = initMissileAeroModel();
-AeroModel = initRocketAeroModel();
+AeroModel = initMissileAeroModel();
+% AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
