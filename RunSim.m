@@ -92,20 +92,20 @@ x_0 = [
 x_t = x_0;
 
 %% Target State Initialization
-% x_0_target = [beta; target_ECEF'; V_target_ECEF];
-% gravity
-g = 9.8;
 % initial target conditions
-Vt = 300;
+Vt = 0;
 B = pi;
 Rtx_i = target_ECEF(1);
-Rty_i = target_ECEF(1);
-Rtz_i = target_ECEF(1);
+Rty_i = target_ECEF(2);
+Rtz_i = target_ECEF(3);
 Vtx_i = Vt*cos(B);
 Vty_i = Vt*sin(B);
 Vtz_i = 0;
-aT = 3*g;
+aT = 0*const.g_e;
 x_0_target = [B; Rtx_i; Rty_i; Rtz_i; Vtx_i; Vty_i; Vtz_i];
+
+% stationary target
+% x_0_target = [B; Rtx_i; Rty_i; Rtz_i; 0; 0; 0];
 
 x_t_target = x_0_target;
 
@@ -126,8 +126,8 @@ accelRecord(:,1) = accel_ecef;
 accelRecordB = nan(length(accel_ecef), numTimePts);
 accelRecordB(:,1) = accel_ecef;
 
-xRecord_target = nan(length(x_0_target), numTimePts);
-xRecord_target(:,1) = x_t_target;
+% xRecord_target = nan(length(x_0_target), numTimePts);
+% xRecord_target(:,1) = x_t_target;
 
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
@@ -151,21 +151,25 @@ tRecord(1:numSteadyPts) = linspace(-steadyStateDuration+time.dt, time.t0, numSte
 xRecord(:, 1:numSteadyPts) = repmat(x_0, 1, numSteadyPts); % Repeat initial state
 accelRecord(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
 accelRecordB(:, 1:numSteadyPts) = zeros(3, numSteadyPts);
+Rtp_record(:, 1:numSteadyPts) = zeros(1, numSteadyPts);
 cmdHist(:, 1:numSteadyPts) = zeros(4, numSteadyPts); % Zero canard deflections
 colNum = numSteadyPts;
 %% Target
-for i = 1:numTimePts
+% for i = 1:numTimePts
+% 
+%     k1 = time.dt * TargetKinematicModel(t, x_t_target, aT);
+%     k2 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k1, aT);
+%     k3 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k2, aT);
+%     k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
+%     x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+% 
+% 
+%     xRecord_target(:, i) = x_t_target;
+% 
+% end
 
-    k1 = time.dt * TargetKinematicModel(t, x_t_target, aT);
-    k2 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k1, aT);
-    k3 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k2, aT);
-    k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
-    x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
-
-
-    xRecord_target(:, i) = x_t_target;
-
-end
+A = ones(1, numTimePts);
+xRecord_target = x_t_target*A;
 
 %% Initialize Live Plots
 % Setup Video Writer
@@ -296,19 +300,22 @@ while(currLLA(3) >= -5)
 
     % Attempt to control roll between 4s and 18s
     if(t >= 4 && t <= 18)
-        accel_cmd_B = [0; 10; 0];
-        accel_cmd_ecef = R_EB * accel_cmd_B;
+%         accel_cmd_B = [0; 10; 0];
+%         accel_cmd_ecef = R_EB * accel_cmd_B;
+% 
+%         rollCmd = deg2rad(0);
+%         pitchCmd = deg2rad(80);
+%         yawCmd = deg2rad(0);
+%         eulCmd = [yawCmd; pitchCmd; rollCmd];
 
-        rollCmd = deg2rad(0);
-        pitchCmd = deg2rad(80);
-        yawCmd = deg2rad(0);
-        eulCmd = [yawCmd; pitchCmd; rollCmd];
-
-        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.8, 0.1, 0], [1.8, 0.1, 0], time.dt, kins, inds, AeroModel);
+        %[canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.8, 0.1, 0], [1.8, 0.1, 0], time.dt, kins, inds, AeroModel);
         %canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
+        %% PUT PRONAV HERE
+        accel_cmd = TrueProNav(x_t, xRecord_target(:,colNum), 3, aT);
+        canardTargetInput = Accel2Canard(x_t, accel_cmd, kins, inds, AeroModel);
         
         % err = [0 0 0];
-        attErr(:, colNum) = err;
+%         attErr(:, colNum) = err;
         
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;
@@ -373,9 +380,16 @@ while(currLLA(3) >= -5)
     accelRecordB(:, colNum) = R_EB'*accel_ecef;
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
-    
-    %% PUT PRONAV HERE
-    accel_cmd(:,colNum) = TrueProNav(x_t, xRecord_target(:,colNum), 3, aT);
+
+    % relative positions and velocities
+    Rtpx = xRecord_target(3,colNum) -  x_t(5);
+    Rtpy = xRecord_target(4,colNum) -  x_t(6);
+    Rtpz = xRecord_target(5,colNum) -  x_t(7);
+
+    % range
+    Rtp = sqrt(Rtpx^2+Rtpy^2+Rtpz^2);
+
+    Rtp_record(:, colNum) = Rtp;
     
     %% Live Plot Graph Update
     plotCounter = plotCounter + 1;
@@ -414,6 +428,8 @@ eulHist = quat2eul(xRecord(inds.q, :)', 'ZYX');
 yawHist   = rad2deg(eulHist(:,1));
 pitchHist = rad2deg(eulHist(:,2));
 rollHist  = rad2deg(eulHist(:,3));
+
+[mdist,midx] = min(abs(Rtp_record));
 
 figure('Name', 'Orientation');
 plot(tRecord(:), yawHist);

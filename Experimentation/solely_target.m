@@ -1,55 +1,73 @@
 clear all; close all; clc
 
-% time steup
-dt = 1e-3;  % use to increase accuracy
-tf = 50;
-t = 0:dt:tf-dt;
-nt = length(t);
+%% Simulator Config **FOR SIMULINK USE LATER**
+% Time Configuration
+time.dt = 0.01; % [s] Time Step
+time.t0 = 0; % [s] Initial Time
+% time.tf = 60*3; % [s] Final Time
+time.tf = 200;
 
-% gravity
-g = 32.2;
+t = time.t0;
 
+simCfg.time = time;
+
+const = setupConstants();
+
+%% Target Initialization
+targetLat = 42.33599546; % [deg] Latitude
+targetLon = -71.8098593; % [deg] Longitude
+targetAlt = 4752; % [m] Altitude MSL
+
+targetLLA = [targetLat, targetLon, targetAlt];
+currTargetLLA = targetLLA;
+
+target_ECEF = lla2ecef(targetLLA);
+
+%% Target State Initialization
 % initial target conditions
-Vt = 3400;
+Vt = 300;
 B = pi;
-Rtx_i = 40000;
-Rty_i = 10000;
-Rtz_i = 1000;
+Rtx_i = target_ECEF(1);
+Rty_i = target_ECEF(2);
+Rtz_i = target_ECEF(3);
 Vtx_i = Vt*cos(B);
 Vty_i = Vt*sin(B);
 Vtz_i = 0;
-aT = 3*g;
+aT = 0*const.g_e;
+% x_0_target = [B; Rtx_i; Rty_i; Rtz_i; Vtx_i; Vty_i; Vtz_i];
 
-% inputs for rk4
+% stationary target
+x_0_target = [B; Rtx_i; Rty_i; Rtz_i; 0; 0; 0];
 
-% for missile
-x_0 = [B; Rtx_i; Rty_i; Rtz_i; Vtx_i; Vty_i; Vtz_i];
-
-x = x_0;
-
-xRec = zeros(length(x_0), nt);
-xRec(:,1) = x_0;
+x_t_target = x_0_target;
 
 
-% rk4 Missile
-for i = 1:nt-1
+numTimePts = time.tf / time.dt+1;
 
-    k1 = dt * TargetKinematicModel(t, x, aT);
-    k2 = dt * TargetKinematicModel(t, x + (1/2)*k1, aT);
-    k3 = dt * TargetKinematicModel(t, x + (1/2)*k2, aT);
-    k4 = dt * TargetKinematicModel(t, x + k3, aT);
-    x = x + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+xRecord_target = nan(length(x_0_target), numTimePts);
+xRecord_target(:,1) = x_t_target;
 
-    xRec(:, i+1) = x;
+
+%% Target
+for i = 1:numTimePts
+
+    k1 = time.dt * TargetKinematicModel(t, x_t_target, aT);
+    k2 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k1, aT);
+    k3 = time.dt * TargetKinematicModel(t, x_t_target + (1/2)*k2, aT);
+    k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
+    x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
+
+
+    xRecord_target(:, i) = x_t_target;
 
 end
 
-% plot
-figure(1)
-plot3(xRec(2,1:tf), xRec(3,1:tf), xRec(4,1:tf),'linewidth', 2);
-title('Target')
-grid on
-hold off
+% % plot
+% figure(1)
+% plot3(xRec(2,1:tf), xRec(3,1:tf), xRec(4,1:tf),'linewidth', 2);
+% title('Target')
+% grid on
+% hold off
 
 % Target Kinematic model
 function dx = TargetKinematicModel(t, x, aT)

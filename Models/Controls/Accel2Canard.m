@@ -1,4 +1,4 @@
-function cmd = Accel2Canard(x, accel_cmd_ecef, kins, inds, AeroModel)
+function canardInput = Accel2Canard(x, accel_cmd_ecef, kins, inds, AeroModel)
     %% for rotation matrix
     r_ecef = [x(inds.px_ecef); x(inds.py_ecef); x(inds.pz_ecef)];
     quat = [x(inds.qw), x(inds.qx), x(inds.qy), x(inds.qz)];
@@ -41,4 +41,9 @@ function cmd = Accel2Canard(x, accel_cmd_ecef, kins, inds, AeroModel)
          kins.I_z/(kins.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(K*accel_B(3)+v_inf*(kins.I_y-kins.I_x)*w(2)*w(1)/kins.I_z)];
 
     cmd = pinv(A) * b;
+
+    canardInput.d1 = cmd(1);
+    canardInput.d2 = cmd(2);
+    canardInput.d3 = cmd(3);
+    canardInput.d4 = cmd(4);
 end
