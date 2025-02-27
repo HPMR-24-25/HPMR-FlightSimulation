@@ -1,4 +1,4 @@
-function ModelData = initMotorModel(motorPlots)
+function ModelData = initMotorModel(motorFile, motorPlots)
 %% Function: initMotorModel
 % Author: Daniel Pearson (djpearson@wpi.edu)
 % Version: 9.16.2024
@@ -13,32 +13,39 @@ end
 
 % List all .rse files in the 'Engine Data' directory
 engineFolder = './Models/Motor/EngineData';
-engineFiles = dir(fullfile(engineFolder, '*.rse'));
 
-% Check if there are .rse files in the directory
-if isempty(engineFiles)
-    error('No .rse files found in the Engine Data folder.');
-end
+% engineFiles = dir(fullfile(engineFolder, '*.rse'));
+% 
+% % Check if there are .rse files in the directory
+% if isempty(engineFiles)
+%     error('No .rse files found in the Engine Data folder.');
+% end
 
 % Create a list of file names for user selection
-fileNames = {engineFiles.name};
+% fileNames = {engineFiles.name};
 
 % Display a selection dialog to the user
-[selectedIndex, ok] = listdlg('PromptString', 'Select a motor file:', ...
-                              'SelectionMode', 'single', ...
-                              'ListString', fileNames);
+% [selectedIndex, ok] = listdlg('PromptString', 'Select a motor file:', ...
+                              % 'SelectionMode', 'single', ...
+                              % 'ListString', fileNames);
 
 % If the user cancels, exit the function
-if ~ok
-    disp('No file selected. Exiting...');
-    return;
-end
+% if ~ok
+%     disp('No file selected. Exiting...');
+%     return;
+% end
 
 % Get the selected file name
-selectedFile = fileNames{selectedIndex};
+% selectedFile = fileNames{selectedIndex};
+
+motorPath = fullfile(engineFolder, motorFile);
+if ~isfile(motorPath)
+    error(['Motor file not found: ', motorPath]);
+end
 
 % Load the selected .rse file
-motorDoc = xmlread(fullfile(engineFolder, selectedFile));
+% motorDoc = xmlread(fullfile(engineFolder, selectedFile));
+motorDoc = xmlread(motorPath);
 
 engDataNodes = motorDoc.getElementsByTagName('eng-data');
 
@@ -54,20 +61,29 @@ ModelData.Isp      = str2double(engConstsNode.getAttribute('Isp'));
 ModelData.t_b      = str2double(engConstsNode.getAttribute('burn-time'));
 ModelData.launchWt = str2double(engConstsNode.getAttribute('initWt')) / 1000;
 ModelData.propWt   = str2double(engConstsNode.getAttribute('propWt')) / 1000;
-ModelData.emptyWt  = ModelData.launchWt - ModelData.propWt / 1000;
+ModelData.emptyWt  = ModelData.launchWt - ModelData.propWt;
+
+% % Loop through each <eng-data> element and extract attributes
+% for i = 0:engDataNodes.getLength-1
+%     engDataNode = engDataNodes.item(i);
+%     time(end+1) = str2double(engDataNode.getAttribute('t'));
+%     thrust(end+1) = str2double(engDataNode.getAttribute('f'));
+%     mass(end+1) = str2double(engDataNode.getAttribute('m')) / 1000; % Convert g to kg
+%     cg(end+1) = str2double(engDataNode.getAttribute('cg'));
+% end
 
 % Loop through each <eng-data> element and extract attributes
 for i = 0:engDataNodes.getLength-1
     % Get the current <eng-data> node
     engDataNode = engDataNodes.item(i);
-    
+
     % Extract attributes: t (time), f (thrust), m (mass), cg (center of gravity)
     timeVal = str2double(engDataNode.getAttribute('t'));
     thrustVal = str2double(engDataNode.getAttribute('f'));
     massVal = str2double(engDataNode.getAttribute('m'));
     cgVal = str2double(engDataNode.getAttribute('cg'));
     % ispVal = str2double(engDataNode.)
-    
+
     % Append values to the arrays
     time(end+1) = timeVal;
     thrust(end+1) = thrustVal;

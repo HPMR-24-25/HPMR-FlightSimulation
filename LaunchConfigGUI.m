@@ -1,6 +1,9 @@
-function LaunchConfigGUI()
+function fig = LaunchConfigGUI()
     % Create the figure
     fig = uifigure('Name', 'Launch Configuration', 'Position', [500, 300, 500, 400]);
+
+    pause(0.5);
+    drawnow;
 
     % --- Select Launch Location Button ---
     uilabel(fig, 'Position', [20, 340, 120, 20], 'Text', 'Launch Location:');
@@ -33,38 +36,49 @@ function LaunchConfigGUI()
     saveButton = uibutton(fig, 'Text', 'Save Configuration', ...
         'Position', [100, 50, 200, 30], ...
         'ButtonPushedFcn', @(btn, event) saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, fig));
+
+    % Debugging: Confirm GUI was created
+    if isvalid(fig)
+        disp('Launch Configuration GUI successfully created.');
+    else
+        error('Failed to create Launch Configuration GUI.');
+    end
 end
 
 % --- Function to Load Available Motor Files ---
 function fileNames = getMotorFileNames()
     engineFolder = './Models/Motor/EngineData';
+    
+    % Ensure directory exists
+    if ~isfolder(engineFolder)
+        warning('EngineData folder does not exist: %s', engineFolder);
+        fileNames = {'No motors found'};
+        return;
+    end
+
     engineFiles = dir(fullfile(engineFolder, '*.rse'));
     fileNames = {engineFiles.name};
     
     if isempty(fileNames)
         fileNames = {'No motors found'};
     end
-
-    disp('Available Motor Files:');
-    disp(fileNames);
 end
 
 % --- Function to Load and Display Motor Model ---
 function loadMotorModel(dropdown, fig)
-    dropdown.Items = getMotorFileNames();
-    pause(0.1);
-
-    dropdown.Items = getMotorFileNames();
+    % Get selected motor file from dropdown
     selectedMotor = dropdown.Value;
-    
-    disp(['Selected Motor: ', selectedMotor]);
 
     if strcmp(selectedMotor, 'No motors found') || isempty(selectedMotor)
+        warning('No motor selected in dropdown.')
         return;
     end
-    
+
     % Call initMotorModel to load the motor data
-    motorData = initMotorModel(false);
+    motorData = initMotorModel(selectedMotor, false);
+
+    % Store the motorData in the figure for later use
+    fig.UserData.motorData = motorData;
 
     % Display key motor properties
     motorInfoText = sprintf('Isp: %.2f s, Burn Time: %.2f s, Init Mass: %.2f kg', ...
@@ -73,9 +87,6 @@ function loadMotorModel(dropdown, fig)
     % Find and update the motor info label in the GUI
     motorInfoLabel = findobj(fig, 'Type', 'uilabel', 'Text', 'Motor Info: Select a motor');
     motorInfoLabel.Text = motorInfoText;
-
-    % Store the motorData in the figure for later use
-    fig.UserData.motorData = motorData;
 end
 
 % --- Function to Select Launch Location ---
@@ -89,7 +100,7 @@ end
 function saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, fig)
     locationStr = locationLabel.Text;
     lla = extractLLA(locationStr);
-    motorModel = motorDropdown.Value;
+    motorModel = motorDropdown.Value;    
     motorInfo = motorInfoLabel.Text;
     plotThrust = plotCheckBox.Value;
 
@@ -97,8 +108,16 @@ function saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, 
     if isfield(fig.UserData, 'motorData')
         motorData = fig.UserData.motorData;
     else
+        warning('Motor model data is missing in GUI. Please select a motor.');
         motorData = [];
     end
+
+    % Debugging output
+    disp('Saving Configuration...');
+    disp(['Launch Location: ', locationStr]);
+    disp(['Selected Motor: ', motorModel]);
+    disp('Motor Data:');
+    disp(motorData);  % Should not be empty
 
     % Store everything in a struct
     config = struct('LaunchLocation', locationStr, ...
@@ -111,10 +130,6 @@ function saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, 
     % save to .mat file
     save('lastConfig.mat', 'config');
 
-    % Display in console
-    disp('Launch Configuration Saved:');
-    disp(config);
-
     % If thrust plotting is enabled, generate the plots
     if plotThrust && ~isempty(motorData)
         figure('Name', 'Thrust Curve');
@@ -125,8 +140,15 @@ function saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, 
         grid on;
     end
 
-    % Close the figure
-    close(fig);
+    disp('Saving configuration...');
+
+    if isvalid(fig)
+        pause(0.5);
+        delete(fig);
+        disp('Configuration GUI was forced closed.');
+    else
+        disp('Configuration GUI was already closed.');
+    end
 end
 
 function lla = extractLLA(locationStr)
