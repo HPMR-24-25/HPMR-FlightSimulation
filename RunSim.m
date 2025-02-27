@@ -6,15 +6,15 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-kins = HPMR_MissileKinematics();
-% kins = HPMR_ModelRocketKinematics();
+% kins = HPMR_MissileKinematics();
+kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-AeroModel = initMissileAeroModel();
-% AeroModel = initRocketAeroModel();
+% AeroModel = initMissileAeroModel();
+AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
@@ -53,30 +53,32 @@ currTargetLLA = targetLLA;
 
 target_ECEF = lla2ecef(targetLLA);
 
-%% Attitude Initialization
-roll_0 = deg2rad(0);
-pitch_0 = deg2rad(90);
+% Attitude Initialization
 yaw_0 = deg2rad(0);
+roll_0 = deg2rad(10);
+pitch_0 = deg2rad(80);
 
-q_0 = eul2quat(roll_0, pitch_0, yaw_0);
+q_0 = hpmr_eul2quat(yaw_0, pitch_0, roll_0);
+
+eul_0 = hpmr_quat2eul(q_0);
 
 %$ Angular Rate Initialization
 w_ib_x = 0.00; % [rad/s]
 w_ib_y = 0.00; % [rad/s]
 w_ib_z = 0.00; % [rad/s]
 
-%% Velocity Initialization
+% Velocity Initialization
 Vx_E_0 = 1e-2; % [m/s]
 Vy_E_0 = 1e-2; % [m/s]
 Vz_E_0 = 1e-2; % [m/s]
 
-%% Initial Mass
+% Initial Mass
 m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
 
 
 %% State Initialization
 x_0 = [
-    q_0';
+    q_0;
     launch_ECEF_m';
     Vx_E_0;
     Vy_E_0;
@@ -129,13 +131,15 @@ xRecord_target(:,1) = x_t_target;
 tSpan = [0, time.tf];  % Start time and end time
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);  % Tolerances for ode45
 
-% Guidance Storage
+%% Guidance Storage
 cmdHist = zeros(4, numTimePts);
 % Initialize buffer and max actuation rate for canards (e.g., 0.1 rad/s)
-stateBuffer = nan(size(accel_ecef, 1), 2);
+accelBuffer = nan(size(accel_ecef, 1), 2);
 Canard_Buffer = nan(4, 2);
 prevCanardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
 canardInput = struct('d1', 0, 'd2', 0, 'd3', 0, 'd4', 0); % Initial canard deflections
+stateBuffer = nan(size(x_t, 1), 20);
+attErr = zeros(3, numTimePts);
 
 %% Fill steady state data for set period of time (Simulate Launcher)
 steadyStateDuration = 5; % [s]
@@ -157,17 +161,115 @@ for i = 1:numTimePts
     k4 = time.dt * TargetKinematicModel(t, x_t_target + k3, aT);
     x_t_target = x_t_target + (1/5)*k1 + (1/3)*k2 + (1/3)*k3 + (1/6)*k4;
 
+
     xRecord_target(:, i) = x_t_target;
 
 end
 
-%% Missile
+%% Initialize Live Plots
+% Setup Video Writer
+% videoFile = 'MissileSimulation.mp4';
+% v = VideoWriter(videoFile, 'MPEG-4');
+% open(v);
+
+% Set up main figure
+dataVis = figure('Name', 'Missile Data Visualization');
+% COLUMN 1: Orientation Plot
+subplot(1,3,1); 
+hold on;
+ax = gca;
+pose = poseplot(ones('quaternion'));
+pose.Orientation = quaternion(x_t(inds.q)');
+
+grid on;
+axis equal;
+xlabel('X (m)');
+ylabel('Y (m)');
+zlabel('Z (m)');
+title('Missile Orientation');
+
+% COLUMN 2: Altitude & Velocity
+subplot(2,3,2); % Altitude (top half)
+altitudePlot = plot(nan, nan, 'r');
+title('Altitude Vs. Time');
+ylabel('Altitude (m)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(2,3,5); % Velocity
+velocityPlot = plot(nan, nan, 'r');
+title('Velocity Vs. Time');
+ylabel('Velocity (m/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+% COLUMN 3: Angular Velocities
+subplot(3,3,3); % Angular Velocity X (Roll Rate)
+omegaXPlot = plot(nan, nan, 'r');
+title('Angular Velocity X (Roll Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,3,6); % Angular Velocity Y (Pitch Rate)
+omegaYPlot = plot(nan, nan, 'g');
+title('Angular Velocity Y (Pitch Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,3,9); % Angular Velocity Z (Yaw Rate)
+omegaZPlot = plot(nan, nan, 'b');
+title('Angular Velocity Z (Yaw Rate)');
+ylabel('Angular Velocity (rad/s)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+% Attitude Error Monitor Window
+figure('Name', 'Attitude Error Monitoring');
+
+subplot(3,1,1);
+rollErrorPlot = plot(nan, nan, 'r');
+title('Roll Error Vs. Time');
+ylabel('Roll Error (deg)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+% Guidance Error Plots
+subplot(3,1,2);
+pitchErrorPlot = plot(nan, nan, 'g');
+title('Pitch Error Vs. Time');
+ylabel('Pitch Error (deg)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+subplot(3,1,3);
+yawErrorPlot = plot(nan, nan, 'b');
+title('Yaw Error Vs. Time');
+ylabel('Yaw Error (deg)');
+xlabel('Time (s)');
+grid on;
+hold on;
+
+
+% Plot update frequency
+updateFrequency = 10;
+plotCounter = 0;
+
+%% Run Missile Simulation
 while(currLLA(3) >= -5)
     colNum = colNum + 1;
 
     % Update buffer with the latest state; shift older states
-    stateBuffer(:, 2) = stateBuffer(:, 1);
-    stateBuffer(:, 1) = accel_ecef;
+    stateBuffer(:, 2:end) = stateBuffer(:, 1:end-1); 
+    stateBuffer(:, 1) = x_t;
 
     % Update Canard buffer with the latest state; shift older states
     Canard_Buffer(:, 2) = Canard_Buffer(:, 1);
@@ -191,25 +293,29 @@ while(currLLA(3) >= -5)
 
     R_EB = R_ET' * R_TB;
 
-    % Attempt to control roll between 4s and 8s
-    if(t >= 4 && t <= 20)
+    % Attempt to control roll between 4s and 18s
+    if(t >= 4 && t <= 18)
         accel_cmd_B = [0; 10; 0];
         accel_cmd_ecef = R_EB * accel_cmd_B;
-        % accel_cmd_ecef = [accel_ecef(1); accel_ecef(2); accel_ecef(3)];
-        
-        % canardTargetInput = RollController_PID(stateBuffer, rollCmd, 0.4, 0, 0, time.dt);
-        % canardTargetInput = RollPitchYawController_PID(stateBuffer, 0, 0, 0, 0.4, 0, 0, 0.4, 0, 0, 0.4, 0, 0, time.dt);
-        % canardTargetInput = AttitudeController_PID(stateBuffer, [rollCmd; pitchCmd; yawCmd], 10, 0, 0, time.dt, kins, inds, AeroModel);
-        %canardTargetInput = AccelerationController_PID(x_t, stateBuffer, accel_cmd_ecef, 10, 0, 0, time.dt, kins, inds, AeroModel);
-        canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
 
+        rollCmd = deg2rad(0);
+        pitchCmd = deg2rad(80);
+        yawCmd = deg2rad(0);
+        eulCmd = [yawCmd; pitchCmd; rollCmd];
+
+        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.8, 0.1, 0], [1.8, 0.1, 0], time.dt, kins, inds, AeroModel);
+        %canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
+        
+        % err = [0 0 0];
+        attErr(:, colNum) = err;
+        
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;
 
-%         canardInput.d1 = deg2rad(0);
-%         canardInput.d2 = deg2rad(0);
-%         canardInput.d3 = deg2rad(0);
-%         canardInput.d4 = deg2rad(0);
+        % canardInput.d1 = deg2rad(6);
+        % canardInput.d2 = deg2rad(-6);
+        % canardInput.d3 = deg2rad(6);
+        % canardInput.d4 = deg2rad(-6);
 
         % Update the historical command for analysis
         cmdHist(:,colNum) = [canardInput.d1; canardInput.d2; canardInput.d3; canardInput.d4];
@@ -266,90 +372,58 @@ while(currLLA(3) >= -5)
     accelRecordB(:, colNum) = R_EB'*accel_ecef;
 
     sensorReading = generateIMU_Readings(x_t, accel_ecef, ImuModel, inds, const);
-
+    
     %% PUT PRONAV HERE
     accel_cmd(:,colNum) = TrueProNav(x_t, xRecord_target(:,colNum), 3, aT);
+    
+    %% Live Plot Graph Update
+    plotCounter = plotCounter + 1;
+    if mod(plotCounter, updateFrequency) == 0
+        plotCounter = 0; % avoid plotCounter getting too large
+        set(pose, 'Orientation', quaternion(x_t(inds.q)'));
 
-    %% Visualize Quaternion
-    q = quaternion(x_t(inds.q)');
+        lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 
-    poseplot(q, [0,0,0]);
+        set(altitudePlot, 'XData', tRecord, 'YData', lla(:, 3)); % Altitude vs Time
+        set(velocityPlot, 'XData', tRecord, 'YData', vecnorm(xRecord(inds.vel, :))); % Velocity vs Time
+        set(omegaXPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_x,:)); % Angular Vel X
+        set(omegaYPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_y,:)); % Angular Vel Y
+        set(omegaZPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_z,:)); % Angular Vel Z
 
-    drawnow;
+        set(yawErrorPlot, 'XData', tRecord, 'YData', attErr(1, :));
+        set(pitchErrorPlot, 'XData', tRecord, 'YData', attErr(2, :));
+        set(rollErrorPlot, 'XData', tRecord, 'YData', attErr(3, :));
+    
+        drawnow;
+
+        % frame = getframe(dataVis);
+        % writeVideo(v, frame);
+    end
 
 end
 
+% close(v);
 
-
-%% Plot Vehicle Trajectory
-lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
-
-lla_target = ecef2lla([xRecord_target(2, :)', xRecord_target(3, :)', xRecord_target(4, :)']);
-
-position_target_ECEF = [xRecord_target(2, :)', xRecord_target(3, :)', xRecord_target(4, :)'];
-
-% % Create a geoglobe
-% uif = uifigure('Name', 'Vehicle Trajectory');
-% g = geoglobe(uif);
+% %% Plot Vehicle Trajectory
+% lla = ecef2lla([xRecord(inds.px_ecef, :)', xRecord(inds.py_ecef, :)', xRecord(inds.pz_ecef, :)']);
 % 
-% geoplot3(g, lla(:, 1), lla(:,2), lla(:,3),"y");
-% hold(g,'on') % retains plot so that new plots can be added to the same plot
-% geoplot3(g, lla_target(:, 1), lla_target(:,2), lla_target(:,3), "r");
-% hold(g,'off')
+% %% Euler Angles
+eulHist = quat2eul(xRecord(inds.q, :)', 'ZYX');
 
-%% Euler Angles
-% eulHist = quat2eul(xRecord(1:4, :)', 'ZYX');
-% eulHist = q_to_ypr(xRecord(1:4, :)');
-% for i = 1:20001
-%     if isnan(xRecord(1:4, i))
-%         break
-%     else 
-%         eulHist(i,:) = q_to_ypr(xRecord(1:4, i)');
-%     end
-% end
+yawHist   = rad2deg(eulHist(:,1));
+pitchHist = rad2deg(eulHist(:,2));
+rollHist  = rad2deg(eulHist(:,3));
 
-% yawHist   = rad2deg(eulHist(:,1));
-% pitchHist = rad2deg(eulHist(:,2));
-% rollHist  = rad2deg(eulHist(:,3));
+figure('Name', 'Orientation');
+plot(tRecord(:), yawHist);
+hold on;
+plot(tRecord(:), pitchHist);
+plot(tRecord(:), rollHist);
+hold off;
+title("Euler Angles");
+legend('Yaw', 'Pitch', 'Roll');
 
-% Plot
-% figure('Name', 'Orientation');
-% plot(tRecord(1:length(eulHist)), yawHist);
-% hold on;
-% plot(tRecord(1:length(eulHist)), pitchHist);
-% plot(tRecord(1:length(eulHist)), rollHist);
-% hold off;
-% title("Euler Angles");
-% legend('Yaw', 'Pitch', 'Roll');
-% 
-% figure('Name', 'Angular Velocity');
-% plot(tRecord(:), xRecord(inds.w_ib_x,:));
-% hold on;
-% plot(tRecord(:), xRecord(inds.w_ib_y,:));
-% plot(tRecord(:), xRecord(inds.w_ib_z,:));
-% hold off;
-% title("Angular Velocity");
-% legend('P', 'Q', 'R');
-
-%% Vehicle State
-
-% figure('Name', 'Altitude');
-% plot(tRecord(:), lla(:,3))
-% title("Altitude Vs. Time");
-% ylabel("Altitude (m)");
-% xlabel("Time (s)");
-% grid on;
-% 
-% velocityHist = vecnorm(xRecord(inds.vel, :));
-% 
-% figure('Name', 'Velocity');
-% plot(tRecord(:), velocityHist);
-% title('Velocity Vs. Time');
-% ylabel("Velocity (m/s)");
-% xlabel("Time (s)");
-% grid on;
-
-% % Altitude Vs Downrange
+% Atitude Vs Downrange
 % downrange = getHaversine(launchLLA(1), launchLLA(2), lla(:,1), lla(:,2), const);
 % figure('Name', 'Conops');
 % plot(downrange, lla(:,3));
