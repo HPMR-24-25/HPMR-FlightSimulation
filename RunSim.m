@@ -295,16 +295,16 @@ while(currLLA(3) >= -5)
     R_EB = R_ET' * R_TB;
 
     % Attempt to control roll between 4s and 18s
-    if(t >= 4 && t <= 18)
+    if(t >= 4 && t <= 12)
         accel_cmd_B = [0; 10; 0];
         accel_cmd_ecef = R_EB * accel_cmd_B;
 
-        rollCmd = deg2rad(0);
+        rollCmd = deg2rad(30);
         pitchCmd = deg2rad(80);
         yawCmd = deg2rad(0);
         eulCmd = [yawCmd; pitchCmd; rollCmd];
 
-        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.8, 0.1, 0], [1.8, 0.1, 0], time.dt, kins, inds, AeroModel);
+        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.4, 0.1, 0], [1.4, 0.1, 0], time.dt, kins, inds, AeroModel);
         %canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
         
         % err = [0 0 0];
