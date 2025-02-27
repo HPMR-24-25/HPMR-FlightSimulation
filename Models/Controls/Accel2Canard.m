@@ -37,8 +37,8 @@ function canardInput = Accel2Canard(x, accel_cmd_ecef, kins, inds, AeroModel)
          0 -1 0 1];
 
     b = [0*kins.I_x/(C_p*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)      *(K*accel_B(1)+v_inf*(kins.I_z-kins.I_y)*w(2)*w(3)/kins.I_x);
-         kins.I_y/(kins.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(K*accel_B(2)+v_inf*(kins.I_x-kins.I_z)*w(1)*w(3)/kins.I_y);
-         kins.I_z/(kins.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(K*accel_B(3)+v_inf*(kins.I_y-kins.I_x)*w(2)*w(1)/kins.I_z)];
+         kins.I_y/(kins.canard.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(K*accel_B(2)+v_inf*(kins.I_x-kins.I_z)*w(1)*w(3)/kins.I_y);
+         kins.I_z/(kins.canard.x_cp*q_inf * kins.canard.S * AeroModel.canard.CL_delta*v_inf)*(K*accel_B(3)+v_inf*(kins.I_y-kins.I_x)*w(2)*w(1)/kins.I_z)];
 
     cmd = pinv(A) * b;
 
