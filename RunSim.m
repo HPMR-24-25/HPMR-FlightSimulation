@@ -90,7 +90,6 @@ x_0 = [
 x_t = x_0;
 
 %% Target State Initialization
-% x_0_target = [beta; target_ECEF'; V_target_ECEF];
 % gravity
 g = 9.8;
 % initial target conditions
