@@ -306,9 +306,10 @@ while(currLLA(3) >= -5)
 
         [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.4, 0.1, 0], [1.4, 0.1, 0], time.dt, kins, inds, AeroModel);
         %canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
+        %[canardTargetInput, cmdTorque] = Controller_Lyapunov(x_t, eulCmd, 1, 1, kins, inds, AeroModel, time.dt);
         
         % err = [0 0 0];
-        attErr(:, colNum) = err;
+        % attErr(:, colNum) = err;
         
         % canardInput = constrainMissileAcutationLimits(x_t, canardTargetInput, prevCanardInput, kins, time);
         canardInput = canardTargetInput;

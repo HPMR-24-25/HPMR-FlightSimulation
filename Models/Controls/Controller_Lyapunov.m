@@ -1,4 +1,4 @@
-function [canardInput, L] = Controller_Lyapunov(x, cmd, P, I, D, kins, inds, AeroModel, dt)
+function [canardInput, L] = Controller_Lyapunov(x, cmd, P, D, kins, inds, AeroModel, dt)
 % Controller_Lyapunov - Lyapunov attitude controller
 % Roll, Pitch, and Yaw controller using a P and D gains
 % Inputs:
@@ -27,72 +27,65 @@ dq = [qc_inv(4) * q(1:3) + q(4) * qc_inv(1:3) - cross(q(1:3), qc_inv(1:3));
     q(4)*qc_inv(4) - dot(q(1:3), qc_inv(1:3));
 ];
 
-L = -P * sign(dq(4))*dq(1:3)-D*x(inds.w_ib);
+% L = -P * sign(dq(4))*dq(1:3)-D*x(inds.w_ib);
 
 % dq_2 = Qmult(q,Qinv(qc))
 
-% L_1 = -P*sign(dq(4))*dq(1:3)-D*(1+dq(1:3)'*dq(1:3))*w
+L = -P*sign(dq(4))*dq(1:3)-D*(1+dq(1:3)'*dq(1:3))*w;
 % L_2 = -P*sign(dq(4))*dq(1:3)-D*(1-dq(1:3)'*dq(1:3))*w
 
+T_x = L(1);
+T_y = L(2);
+T_z = L(3);
 
 %% Torque to Canard Actuations
-% tranpose could be wrong here
-lla = ecef2lla(x(inds.pos)',"wgs84");
-alt = lla(3);
-AtmosphericModel(alt);
+    lla = ecef2lla(x(inds.pos),"wgs84");
+    alt = lla(3);
+    AtmosphericModel(alt);
+    rho_inf = AtmosphericModel.rho_sl;
+    v_inf = norm(x(inds.vel, 2));
 
-d = kins.diameter;
-r = kins.x_cp;
-rho_inf = AtmosphericModel.rho_sl;
-v_inf = norm(v);
-S = kins.S;
+    q_inf = 0.5 * rho_inf * v_inf^2;
 
-% Not sure if this is right, check notebook
-CL_delta = AeroModel.canard.CL_delta;
-% CL = CL_delta*qc;
+    % A = [d -d  d -d; 
+    %      r  0 -r  0;
+    %      0 -r  0  r];
+    % 
+    % b = [T_x/H; T_y/H; T_z/H];
 
-q_inf = 0.5*rho_inf*v_inf^2;
+    % A = [kins.canard.z_cp_13, kins.canard.y_cp_24, kins.canard.z_cp_13, kins.canard.y_cp_24;
+    %  kins.canard.x_cp,   -kins.canard.x_cp,    0,  0;
+    %  0,  0,   kins.canard.x_cp,  -kins.canard.x_cp];
 
-H = CL_delta*q_inf*S;
+    C_p = (kins.diameter/2) + (kins.canard.height/2);
 
-A = [d -d d -d;
-     r 0 -r 0;
-     0 -r 0 r];
+    A = [
+        C_p -C_p C_p -C_p;
+        0 kins.x_cp 0 -kins.x_cp;
+        -kins.x_cp 0 kins.x_cp 0;
+    ];
 
-B = [L(1)/H; L(2)/H; L(3)/H];
+    % Compute b vector
+    % b = [T_x; T_y; T_z];
+    b = (1 / (q_inf * kins.canard.S * AeroModel.canard.CL_delta)) * ...
+        [T_x; 
+         T_y; 
+         T_z];
 
-cmd = pinv(A)*B;
+    % cmd = b / A';
+    cmd = pinv(A) * b;
 
-canardInput.d1 = cmd(1);
-canardInput.d2 = cmd(2);
-canardInput.d3 = cmd(3);
-canardInput.d4 = cmd(4);
+    % canardInput.d1 = T_x;
+    % canardInput.d2 = T_x;
+    % canardInput.d3 = T_x;
+    % canardInput.d4 = T_x;
 
-%% Functions
-    function quadprod = Qmult(p, q)
-        q13 = q(1:3);
-        p13 = p(1:3);
-        q4 = q(4);
-        p4 = p(4);
+    canardInput.d1 = cmd(1);
+    canardInput.d2 = cmd(2);
+    canardInput.d3 = cmd(3);
+    canardInput.d4 = cmd(4);
 
-        quadprod1 = q4*p13 + p4*q13 - cross(p13, q13);
-        quadprod2 = p4*q4 - dot(p13, q13);
-
-        quadprod = [quadprod1; quadprod2];
-    end
-
-    function p = Qinv(q)
-        q1 = q(1);
-        q2 = q(2);
-        q3 = q(3);
-        q4 = q(4);
-
-        q_mag = norm(q);
-        q_star = [-q1; -q2; -q3; q4];
-
-        p = q_star/(q_mag^2);
-    end
-
+%% Function
     function quat = euler2quaternion(eul)
         phi = eul(1)/2; %roll
         theta = eul(2)/2; %pitch
