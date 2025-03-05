@@ -6,15 +6,15 @@ clear variables; close all; clc;
 
 %% Configure constants and model data
 const = setupConstants();
-kins = HPMR_MissileKinematics();
-% kins = HPMR_ModelRocketKinematics();
+% kins = HPMR_MissileKinematics();
+kins = HPMR_ModelRocketKinematics();
 
 % Kinematics 
 inds = getMissileInds(); % Control State Indices
 
 % Aerodynamics Model
-AeroModel = initMissileAeroModel();
-% AeroModel = initRocketAeroModel();
+% AeroModel = initMissileAeroModel();
+AeroModel = initRocketAeroModel();
 
 % Motor Model
 MotorModel = initMotorModel();
@@ -54,9 +54,9 @@ currTargetLLA = targetLLA;
 target_ECEF = lla2ecef(targetLLA);
 
 % Attitude Initialization
-yaw_0 = deg2rad(0);
-roll_0 = deg2rad(10);
-pitch_0 = deg2rad(80);
+yaw_0 = deg2rad(0.01);
+roll_0 = deg2rad(0.01);
+pitch_0 = deg2rad(87);
 
 q_0 = hpmr_eul2quat(yaw_0, pitch_0, roll_0);
 
@@ -295,16 +295,16 @@ while(currLLA(3) >= -5)
     R_EB = R_ET' * R_TB;
 
     % Attempt to control roll between 4s and 18s
-    if(t >= 4 && t <= 12)
+    if(t >= 5 && t <= 19)
         accel_cmd_B = [0; 10; 0];
         accel_cmd_ecef = R_EB * accel_cmd_B;
 
-        rollCmd = deg2rad(30);
+        rollCmd = deg2rad(25);
         pitchCmd = deg2rad(80);
         yawCmd = deg2rad(0);
         eulCmd = [yawCmd; pitchCmd; rollCmd];
 
-        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.4, 0.1, 0], [1.4, 0.1, 0], time.dt, kins, inds, AeroModel);
+        [canardTargetInput, cmdTorque, err] = AttitudeController_PID(stateBuffer, eulCmd, [1.2, 0.03, 0.001], [0.5, 0.02, 0.001], time.dt, kins, inds, AeroModel);
         %canardTargetInput = CanardController_PID(x_t, accel_cmd_ecef, Canard_Buffer, 5, 0, 0, time.dt, kins, inds, AeroModel);
         
         % err = [0 0 0];
@@ -391,9 +391,9 @@ while(currLLA(3) >= -5)
         set(omegaYPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_y,:)); % Angular Vel Y
         set(omegaZPlot, 'XData', tRecord, 'YData', xRecord(inds.w_ib_z,:)); % Angular Vel Z
 
-        set(yawErrorPlot, 'XData', tRecord, 'YData', attErr(1, :));
-        set(pitchErrorPlot, 'XData', tRecord, 'YData', attErr(2, :));
-        set(rollErrorPlot, 'XData', tRecord, 'YData', attErr(3, :));
+        set(yawErrorPlot, 'XData', tRecord, 'YData', rad2deg(attErr(1, :)));
+        set(pitchErrorPlot, 'XData', tRecord, 'YData', rad2deg(attErr(2, :)));
+        set(rollErrorPlot, 'XData', tRecord, 'YData', rad2deg(attErr(3, :)));
     
         drawnow;
 
@@ -433,14 +433,14 @@ legend('Yaw', 'Pitch', 'Roll');
 % xlabel("Downrange (m)");
 % grid on;
 
-% %% Canard Command History
-% figure('Name', 'Canard Angles');
-% plot(tRecord(:), rad2deg(cmdHist));
-% title('Canard Actuation');
-% ylabel("Actuation (deg)");
-% xlabel("Time (s)");
-% grid on;
-% legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
+%% Canard Command History
+figure('Name', 'Canard Angles');
+plot(tRecord(:), rad2deg(cmdHist));
+title('Canard Actuation');
+ylabel("Actuation (deg)");
+xlabel("Time (s)");
+grid on;
+legend('Canard 1', 'Canard 2', 'Canard 3', 'Canard 4');
 
 %% Acceleration ECEF
 figure('Name', 'Acceleration');
