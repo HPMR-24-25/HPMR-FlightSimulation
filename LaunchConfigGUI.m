@@ -1,9 +1,16 @@
 function fig = LaunchConfigGUI()
+    disp('Creating Launch Configuration GUI...');
+    
     % Create the figure
     fig = uifigure('Name', 'Launch Configuration', 'Position', [500, 300, 500, 400]);
-
     pause(0.5);
     drawnow;
+
+    % Debugging: Confirm GUI creation
+    if ~isvalid(fig)
+        error('Failed to create Launch Configuration GUI.');
+    end
+    disp('Launch Configuration GUI successfully created.');
 
     % --- Select Launch Location Button ---
     uilabel(fig, 'Position', [20, 340, 120, 20], 'Text', 'Launch Location:');
@@ -26,23 +33,17 @@ function fig = LaunchConfigGUI()
     % --- Motor Info Display ---
     motorInfoLabel = uilabel(fig, 'Position', [20, 200, 400, 30], ...
                              'Text', 'Motor Info: Select a motor', ...
-                             'HorizontalAlignment', 'left');
+                             'HorizontalAlignment', 'left', ...
+                             'Tag', 'MotorInfoLabel');  % Add a tag for easier finding
 
     % --- Checkbox for Thrust Curve Plots ---
-    plotCheckBox = uicheckbox(fig, 'Position', [175, 200, 200, 20], ...
+    plotCheckBox = uicheckbox(fig, 'Position', [175, 170, 200, 20], ...  % Adjusted position
                               'Text', 'Plot Thrust Curve', 'Value', false);
 
     % --- Save Button ---
     saveButton = uibutton(fig, 'Text', 'Save Configuration', ...
         'Position', [100, 50, 200, 30], ...
         'ButtonPushedFcn', @(btn, event) saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, fig));
-
-    % Debugging: Confirm GUI was created
-    if isvalid(fig)
-        disp('Launch Configuration GUI successfully created.');
-    else
-        error('Failed to create Launch Configuration GUI.');
-    end
 end
 
 % --- Function to Load Available Motor Files ---
@@ -74,89 +75,134 @@ function loadMotorModel(dropdown, fig)
         return;
     end
 
-    % Call initMotorModel to load the motor data
-    motorData = initMotorModel(selectedMotor, false);
+    try
+        % Call initMotorModel to load the motor data
+        motorData = initMotorModel(selectedMotor, false);
 
-    % Store the motorData in the figure for later use
-    fig.UserData.motorData = motorData;
+        % Store the motorData in the figure for later use
+        fig.UserData.motorData = motorData;
 
-    % Display key motor properties
-    motorInfoText = sprintf('Isp: %.2f s, Burn Time: %.2f s, Init Mass: %.2f kg', ...
-                            motorData.Isp, motorData.t_b, motorData.launchWt);
-    
-    % Find and update the motor info label in the GUI
-    motorInfoLabel = findobj(fig, 'Type', 'uilabel', 'Text', 'Motor Info: Select a motor');
-    motorInfoLabel.Text = motorInfoText;
+        % Display key motor properties
+        motorInfoText = sprintf('Isp: %.2f s, Burn Time: %.2f s, Init Mass: %.2f kg', ...
+                                motorData.Isp, motorData.t_b, motorData.launchWt);
+        
+        % Find the motor info label using its tag
+        motorInfoLabel = findobj(fig, 'Type', 'uilabel', 'Tag', 'MotorInfoLabel');
+        if ~isempty(motorInfoLabel)
+            motorInfoLabel.Text = motorInfoText;
+        else
+            warning('Could not find motor info label in GUI.');
+        end
+    catch ME
+        warning('Error loading motor data: %s', ME.message);
+        % Update GUI to show error
+        motorInfoLabel = findobj(fig, 'Type', 'uilabel', 'Tag', 'MotorInfoLabel');
+        if ~isempty(motorInfoLabel)
+            motorInfoLabel.Text = 'Error loading motor data';
+        end
+    end
 end
 
 % --- Function to Select Launch Location ---
 function updateLocation(locationLabel)
+    disp('Opening Map for Launch Location Selection...');
+    drawnow;  % Ensure MATLAB processes UI updates before opening the map
+
+    % Open the selection map immediately
     lla = selectLaunchLocation();
+
+    % Check if location selection was cancelled
+    if isempty(lla)
+        disp('Launch location selection cancelled. Terminating configuration.');
+        if isvalid(locationLabel.Parent)
+            delete(locationLabel.Parent);
+        end
+        error('Configuration cancelled by user.');  % This will stop the simulation
+    end
+
+    % Update GUI with selected location
     locationStr = sprintf('Lat: %.4f, Lon: %.4f, Alt: %.1f m', lla(1), lla(2), lla(3));
     locationLabel.Text = locationStr;
 end
 
+
 % --- Function to Save Configuration ---
 function saveConfig(locationLabel, motorDropdown, motorInfoLabel, plotCheckBox, fig)
-    locationStr = locationLabel.Text;
-    lla = extractLLA(locationStr);
-    motorModel = motorDropdown.Value;    
-    motorInfo = motorInfoLabel.Text;
-    plotThrust = plotCheckBox.Value;
+    try
+        % Check if location is selected
+        if strcmp(locationLabel.Text, 'Not selected')
+            uialert(fig, 'Please select a launch location before saving.', 'Location Not Selected');
+            return;
+        end
 
-    % Retrieve stored motor data
-    if isfield(fig.UserData, 'motorData')
+        % Check if motor is selected
+        if isempty(motorDropdown.Value) || strcmp(motorDropdown.Value, 'No motors found')
+            uialert(fig, 'Please select a motor before saving.', 'Motor Not Selected');
+            return;
+        end
+
+        locationStr = locationLabel.Text;
+        lla = extractLLA(locationStr);
+        
+        % Validate LLA coordinates
+        if any(isnan(lla)) || ~all(isfinite(lla))
+            uialert(fig, 'Invalid launch location coordinates.', 'Invalid Coordinates');
+            return;
+        end
+        
+        motorModel = motorDropdown.Value;    
+        motorInfo = motorInfoLabel.Text;
+        plotThrust = plotCheckBox.Value;
+
+        % Retrieve stored motor data
+        if ~isfield(fig.UserData, 'motorData') || isempty(fig.UserData.motorData)
+            uialert(fig, 'Motor data is missing. Please select a motor again.', 'Missing Motor Data');
+            return;
+        end
         motorData = fig.UserData.motorData;
-    else
-        warning('Motor model data is missing in GUI. Please select a motor.');
-        motorData = [];
-    end
 
-    % Debugging output
-    disp('Saving Configuration...');
-    disp(['Launch Location: ', locationStr]);
-    disp(['Selected Motor: ', motorModel]);
-    disp('Motor Data:');
-    disp(motorData);  % Should not be empty
+        % Store everything in a struct
+        config = struct('LaunchLocation', locationStr, ...
+                        'LLA', lla, ...
+                        'MotorModel', motorModel, ...
+                        'MotorInfo', motorInfo, ...
+                        'PlotThrust', plotThrust, ...
+                        'MotorData', motorData);
+        
+        % save to .mat file
+        save('lastConfig.mat', 'config');
 
-    % Store everything in a struct
-    config = struct('LaunchLocation', locationStr, ...
-                    'LLA', lla, ...
-                    'MotorModel', motorModel, ...
-                    'MotorInfo', motorInfo, ...
-                    'PlotThrust', plotThrust, ...
-                    'MotorData', motorData);
-    
-    % save to .mat file
-    save('lastConfig.mat', 'config');
+        % If thrust plotting is enabled, generate the plots in a new figure
+        if plotThrust && ~isempty(motorData)
+            plotFig = figure('Name', 'Thrust Curve');
+            fplot(motorData.thrustPolar, [0, motorData.t_b], 'r');
+            title('Thrust Curve');
+            xlabel('Time (s)');
+            ylabel('Thrust (N)');
+            grid on;
+        end
 
-    % If thrust plotting is enabled, generate the plots
-    if plotThrust && ~isempty(motorData)
-        figure('Name', 'Thrust Curve');
-        fplot(motorData.thrustPolar, [0, motorData.t_b], 'r');
-        title('Thrust Curve');
-        xlabel('Time (s)');
-        ylabel('Thrust (N)');
-        grid on;
-    end
-
-    disp('Saving configuration...');
-
-    if isvalid(fig)
-        pause(0.5);
+        % Close the configuration GUI
         delete(fig);
-        disp('Configuration GUI was forced closed.');
-    else
-        disp('Configuration GUI was already closed.');
+        
+    catch ME
+        % If any error occurs, show it in a dialog and log it
+        errordlg(sprintf('Error saving configuration: %s', ME.message), 'Save Error');
+        warning('Error in saveConfig: %s', ME.message);
     end
 end
 
+% --- Function to Extract LLA ---
 function lla = extractLLA(locationStr)
-    % Extract numbers from text string "Lat: ..., Lon: ..., Alt: ..."
-    nums = sscanf(locationStr, 'Lat: %f, Lon: %f, Alt: %f m');
-    if numel(nums) == 3
-        lla = nums';
-    else
-        lla = [0, 0, 0];
+    try
+        % Extract numbers from text string "Lat: ..., Lon: ..., Alt: ..."
+        nums = sscanf(locationStr, 'Lat: %f, Lon: %f, Alt: %f m');
+        if numel(nums) == 3
+            lla = nums';
+        else
+            lla = [NaN, NaN, NaN];
+        end
+    catch
+        lla = [NaN, NaN, NaN];
     end
 end

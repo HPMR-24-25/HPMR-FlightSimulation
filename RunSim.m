@@ -19,69 +19,44 @@ AeroModel = initMissileAeroModel();
 % Motor Model
 % MotorModel = initMotorModel();
 
-% Debugging: Print message before launching GUI
-% disp('Launching Configuration GUI...');
-% LaunchConfigGUI();
-% 
-% disp('Waiting for GUI to appear...');
-% pause(0.5);
-% 
-% fig = [];
-% while isempty(fig)
-%     pause(0.1);
-%     drawnow;  % Force UI updates
-%     fig = findobj('Type', 'figure', 'Name', 'Launch Configuration');
-% end
-% 
-% disp('GUI is open! Waiting for closure...');
-% 
-% while ~isempty(findobj('Type', 'figure', 'Name', 'Launch Configuration'))
-%     pause(0.1);
-% end
-% 
-% disp('Configuration GUI closed. Proceeding to load configuration...');
-
-disp('Launching Configuration GUI...');
-f = parfeval(@LaunchConfigGUI, 0); % Run GUI asynchronously
-
-disp('Waiting for GUI to appear...');
-pause(1); % Give MATLAB some breathing room to create the GUI
-
-% Debugging: Print what MATLAB detects
-for i = 1:10
-    fig = findobj('Type', 'figure');
-    disp('Figures detected:');
-    disp(fig);
-    pause(0.5);
+%% Launch Configuration
+try
+    disp('Launching Configuration GUI...');
+    fig = LaunchConfigGUI();
+    
+    if ~isvalid(fig)
+        error('Failed to create GUI window.');
+    end
+    
+    % Wait for the GUI to be closed
+    disp('Waiting for configuration...');
+    waitfor(fig);
+    
+    % Check if configuration file exists
+    if ~exist('lastConfig.mat', 'file')
+        error('Configuration file not found. Please complete the configuration in the GUI.');
+    end
+    
+    % Load configuration
+    disp('Loading configuration...');
+    config = load('lastConfig.mat');
+    
+    if ~isfield(config, 'config') || ~isfield(config.config, 'MotorData') || isempty(config.config.MotorData)
+        error('Invalid configuration data. Please run the configuration GUI again.');
+    end
+    
+    % Extract configuration
+    MotorModel = config.config.MotorData;
+    launchLLA = config.config.LLA;
+    
+catch ME
+    % If any error occurs during GUI or config loading
+    errordlg(sprintf('Error in configuration: %s', ME.message), 'Configuration Error');
+    error('Configuration failed: %s', ME.message);
 end
 
-% Now try to get the specific 'Launch Configuration' window
-fig = findobj('Type', 'figure', 'Name', 'Launch Configuration');
-
-% If the GUI was detected, proceed, otherwise throw an error
-if isempty(fig)
-    error('GUI did not open! MATLAB could not detect "Launch Configuration".');
-else
-    disp('GUI is open! Waiting for closure...');
-    waitfor(fig); % Now properly waits for GUI to close
-end
-
-disp('Configuration GUI closed. Proceeding to load configuration...');
-
-% Load the saved configuration
-if exist('lastConfig.mat', 'file')
-    disp('Loading last configuration file...');
-    load('lastConfig.mat', 'config');
-else
-    error('Configuration file not found. Ensure the GUI saved successfully before closing.');
-end
-
-% Extract motor data
-if isfield(config, 'MotorData') && ~isempty(config.MotorData)
-    MotorModel = config.MotorData;
-else
-    error('Motor model data is missing. Please select a motor in the GUI.');
-end
+% Continue with simulation setup
+disp('Configuration loaded successfully. Proceeding with simulation...');
 
 %% Simulator Config **FOR SIMULINK USE LATER**
 % Time Configuration
@@ -98,7 +73,6 @@ simCfg.time = time;
 % launchLon = -71.8098593; % [deg] Longitude
 % launchAlt = 180; % [m] Altitude MSL
 
-launchLLA = config.LLA;
 currLLA = launchLLA;
 
 launch_ECEF_m = lla2ecef(launchLLA);
