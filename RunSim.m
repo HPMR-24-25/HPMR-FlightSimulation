@@ -17,7 +17,46 @@ inds = getMissileInds(); % Control State Indices
 AeroModel = initRocketAeroModel();
 
 % Motor Model
-MotorModel = initMotorModel();
+% MotorModel = initMotorModel();
+
+%% Launch Configuration
+try
+    disp('Launching Configuration GUI...');
+    fig = LaunchConfigGUI();
+    
+    if ~isvalid(fig)
+        error('Failed to create GUI window.');
+    end
+    
+    % Wait for the GUI to be closed
+    disp('Waiting for configuration...');
+    waitfor(fig);
+    
+    % Check if configuration file exists
+    if ~exist('lastConfig.mat', 'file')
+        error('Configuration file not found. Please complete the configuration in the GUI.');
+    end
+    
+    % Load configuration
+    disp('Loading configuration...');
+    config = load('lastConfig.mat');
+    
+    if ~isfield(config, 'config') || ~isfield(config.config, 'MotorData') || isempty(config.config.MotorData)
+        error('Invalid configuration data. Please run the configuration GUI again.');
+    end
+    
+    % Extract configuration
+    MotorModel = config.config.MotorData;
+    launchLLA = config.config.LLA;
+    
+catch ME
+    % If any error occurs during GUI or config loading
+    errordlg(sprintf('Error in configuration: %s', ME.message), 'Configuration Error');
+    error('Configuration failed: %s', ME.message);
+end
+
+% Continue with simulation setup
+disp('Configuration loaded successfully. Proceeding with simulation...');
 
 ImuModel = getASM330Params();
 
@@ -32,11 +71,10 @@ simCfg.time = time;
 
 %% Launch Site Initialization
 % [launchLat, launchLon, launchAlt] = selectLaunchLocation();
-launchLat =  42.2738703; % [deg] Latitude
-launchLon = -71.8098593; % [deg] Longitude
-launchAlt = 180; % [m] Altitude MSL
+% launchLat =  42.2738703; % [deg] Latitude
+% launchLon = -71.8098593; % [deg] Longitude
+% launchAlt = 180; % [m] Altitude MSL
 
-launchLLA = [launchLat, launchLon, launchAlt];
 currLLA = launchLLA;
 
 launch_ECEF_m = lla2ecef(launchLLA);
