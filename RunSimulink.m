@@ -1,0 +1,113 @@
+%% WPI High Power Rocket MQP - Flight Simulator
+% Author: Daniel Pearson (djpearson@wpi.edu)
+% Version: 12.15.2024
+
+clear variables; close all; clc;
+
+%% Configure constants and model data
+const = setupConstants();
+% kins = HPMR_MissileKinematics();
+kins = HPMR_ModelRocketKinematics();
+
+% Kinematics 
+inds = getMissileInds(); % Control State Indices
+
+% Aerodynamics Model
+% AeroModel = initMissileAeroModel();
+AeroModel = initRocketAeroModel();
+
+% IMU Model
+ImuModel = getASM330Params();
+
+% Motor Model
+MotorModel = initMotorModel();
+
+%% Simulator Config **FOR SIMULINK USE LATER**
+% Time Configuration
+time.dt = 0.01; % [s] Time Step
+time.t0 = 0; % [s] Initial Time
+% time.tf = 60*3; % [s] Final Time
+time.tf = 200;
+
+simCfg.time = time;
+
+%% Launch Site Initialization
+% [launchLat, launchLon, launchAlt] = selectLaunchLocation();
+launchLat =  42.2738703; % [deg] Latitude
+launchLon = -71.8098593; % [deg] Longitude
+launchAlt = 180; % [m] Altitude MSL
+
+launchLLA = [launchLat, launchLon, launchAlt];
+% currLLA = launchLLA;
+
+launch_ECEF_m = lla2ecef(launchLLA);
+
+% Attitude Initialization
+yaw_0 = deg2rad(0.01);
+roll_0 = deg2rad(0.01);
+pitch_0 = deg2rad(87);
+
+q_0 = hpmr_eul2quat(yaw_0, pitch_0, roll_0);
+
+eul_0 = hpmr_quat2eul(q_0);
+
+%$ Angular Rate Initialization
+w_ib_x = 0.00; % [rad/s]
+w_ib_y = 0.00; % [rad/s]
+w_ib_z = 0.00; % [rad/s]
+
+% Velocity Initialization
+Vx_E_0 = 1e-2; % [m/s]
+Vy_E_0 = 1e-2; % [m/s]
+Vz_E_0 = 1e-2; % [m/s]
+
+% Initial Mass
+m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
+
+%% State Initialization
+x_0 = [
+    q_0;
+    launch_ECEF_m';
+    Vx_E_0;
+    Vy_E_0;
+    Vz_E_0;
+    w_ib_x;
+    w_ib_y;
+    w_ib_z;
+    m_0;
+];
+
+%% Load Simulink Model
+modelName = 'FlightSimulation';
+runTime = 9999; % [s]
+saveRate = 10; % [Hz]
+saveDir = fullfile(pwd, 'SIM_OUT');
+
+% Open Simulation
+
+open_system(modelName);
+
+% Start Timer
+tic
+
+SimOut = sim(modelName, 'StopTime', num2str(runTime), 'SaveOutput', 'on');
+
+runTime = toc;
+
+fprintf("Run Time: %.1f sec\n", runTime);
+
+% Assign Parameters
+assignin('base', 'const', const);
+assignin('base', 'kins', kins);
+assignin('base', 'inds', inds);
+assignin('base', 'AeroModel', AeroModel);
+assignin('base', 'ImuModel', ImuModel);
+assignin('base', 'MotorModel', MotorModel);
+assignin('base', 'simCfg', simCfg);
+assignin('base', 'launchLLA', launchLLA);
+assignin('base', 'x_0', x_0);
+
+% Set Simulink Parameters
+% set_param(modelName, 'StopTime', num2str(simCfg.time.tf));
+
+% simOut = sim(modelName);

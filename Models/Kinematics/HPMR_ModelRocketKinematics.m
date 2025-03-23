@@ -4,10 +4,16 @@ function kins = HPMR_ModelRocketKinematics()
 kins.x_cg = 65.485 / 39.37;
 kins.x_cp = (70.294 / 39.37) - kins.x_cg;
 % kins.x_cp = 0.12;
-kins.I_x = 0.044;  % [kg/m^2]
-kins.I_y = 11.834; % [kg/m^2]
-kins.I_z = 11.834; % [kg/m^2]
-kins.I = diag([kins.I_x, kins.I_y, kins.I_z]);
+kins.I_x_empty = 0.023;  % [kg/m^2]
+kins.I_y_empty = 5.046; % [kg/m^2]
+kins.I_z_empty = 5.046; % [kg/m^2]
+kins.I_empty = diag([kins.I_x_empty, kins.I_y_empty, kins.I_z_empty]);
+
+kins.I_x_full = 0.021;  % [kg/m^2]
+kins.I_y_full = 4.214; % [kg/m^2]
+kins.I_z_full = 4.214; % [kg/m^2]
+kins.I_full = diag([kins.I_x_full, kins.I_y_full, kins.I_z_full]);
+
 kins.diameter = 4 / 39.37; % [m] Diameter (in -> m)
 kins.S = pi * (kins.diameter^2 / 4);
 
