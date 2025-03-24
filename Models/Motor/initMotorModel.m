@@ -91,6 +91,9 @@ thrustPolar = @(t) max(0, ...
                     .* interp1(time, thrust, t, 'linear') ...
                     + (t < min(time) | t > max(time)) * 0);
 
+ModelData.thrustPts = thrust;
+ModelData.timePts = time;
+
 %% Mass Curve
 % Interpolate prop mass data, return 0 if out of time bounds
 massPolar = @(t) (t >= min(time) & t <= max(time)) ...

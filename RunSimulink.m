@@ -43,18 +43,18 @@ launchLLA = [launchLat, launchLon, launchAlt];
 launch_ECEF_m = lla2ecef(launchLLA);
 
 % Attitude Initialization
-yaw_0 = deg2rad(0.01);
-roll_0 = deg2rad(0.01);
-pitch_0 = deg2rad(87);
+yaw_0 = deg2rad(0);
+roll_0 = deg2rad(0);
+pitch_0 = deg2rad(90);
 
 q_0 = hpmr_eul2quat(yaw_0, pitch_0, roll_0);
 
 eul_0 = hpmr_quat2eul(q_0);
 
 %$ Angular Rate Initialization
-w_ib_x = 0.00; % [rad/s]
-w_ib_y = 0.00; % [rad/s]
-w_ib_z = 0.00; % [rad/s]
+w_ib_x = 1e-2; % [rad/s]
+w_ib_y = 1e-2; % [rad/s]
+w_ib_z = 1e-2; % [rad/s]
 
 % Velocity Initialization
 Vx_E_0 = 1e-2; % [m/s]
