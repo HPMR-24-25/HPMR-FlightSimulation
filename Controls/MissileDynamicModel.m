@@ -53,7 +53,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     v_hat_B = R_EB' * v_hat_ecef; % [1] Unit Vector of Velocity in Body
 
-    AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
+    AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA)
 
     beta = atan2(v_hat_B(2), v_hat_B(1));
 
@@ -146,7 +146,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     % dw_ib_x = M_x_b / kins.I_x;
     % dw_ib_y = M_y_b / kins.I_y;
     % dw_ib_z = M_z_b / kins.I_z;
-    dw_ib = kins.I \ (cross(x(inds.w_ib), (kins.I * x(inds.w_ib))) + [M_x_b; M_y_b; M_z_b]);
+    dw_ib = kins.I_full \ (cross(x(inds.w_ib), (kins.I_full * x(inds.w_ib))) + [M_x_b; M_y_b; M_z_b]);
 
     %% Quaternion Update
     % q_dot = 0.5 * [

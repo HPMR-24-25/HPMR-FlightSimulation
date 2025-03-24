@@ -27,7 +27,7 @@ MotorModel = initMotorModel();
 time.dt = 0.01; % [s] Time Step
 time.t0 = 0; % [s] Initial Time
 % time.tf = 60*3; % [s] Final Time
-time.tf = 200;
+time.tf = 20;
 
 simCfg.time = time;
 
@@ -52,14 +52,14 @@ q_0 = hpmr_eul2quat(yaw_0, pitch_0, roll_0);
 eul_0 = hpmr_quat2eul(q_0);
 
 %$ Angular Rate Initialization
-w_ib_x = 1e-2; % [rad/s]
-w_ib_y = 1e-2; % [rad/s]
-w_ib_z = 1e-2; % [rad/s]
+w_ib_x = 1e-5; % [rad/s]
+w_ib_y = 1e-5; % [rad/s]
+w_ib_z = 1e-5; % [rad/s]
 
 % Velocity Initialization
-Vx_E_0 = 1e-2; % [m/s]
-Vy_E_0 = 1e-2; % [m/s]
-Vz_E_0 = 1e-2; % [m/s]
+Vx_E_0 = 1e-5; % [m/s]
+Vy_E_0 = 1e-5; % [m/s]
+Vz_E_0 = 1e-5; % [m/s]
 
 % Initial Mass
 m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
@@ -79,7 +79,7 @@ x_0 = [
 
 %% Load Simulink Model
 modelName = 'FlightSimulation';
-runTime = 9999; % [s]
+runTime = 150; % [s]
 saveRate = 10; % [Hz]
 saveDir = fullfile(pwd, 'SIM_OUT');
 
@@ -106,8 +106,3 @@ assignin('base', 'MotorModel', MotorModel);
 assignin('base', 'simCfg', simCfg);
 assignin('base', 'launchLLA', launchLLA);
 assignin('base', 'x_0', x_0);
-
-% Set Simulink Parameters
-% set_param(modelName, 'StopTime', num2str(simCfg.time.tf));
-
-% simOut = sim(modelName);
