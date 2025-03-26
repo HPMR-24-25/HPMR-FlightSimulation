@@ -27,7 +27,7 @@ MotorModel = initMotorModel();
 time.dt = 0.01; % [s] Time Step
 time.t0 = 0; % [s] Initial Time
 % time.tf = 60*3; % [s] Final Time
-time.tf = 20;
+time.tf = 60;
 
 simCfg.time = time;
 
@@ -45,21 +45,30 @@ launch_ECEF_m = lla2ecef(launchLLA);
 % Attitude Initialization
 yaw_0 = deg2rad(0);
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(90);
+pitch_0 = deg2rad(86);
+
+eul_0 = [roll_0; pitch_0; yaw_0];
 
 q_0 = hpmr_eul2quat(yaw_0, pitch_0, roll_0);
 
-eul_0 = hpmr_quat2eul(q_0);
-
-%$ Angular Rate Initialization
+% Angular Rate Initialization
 w_ib_x = 1e-5; % [rad/s]
 w_ib_y = 1e-5; % [rad/s]
 w_ib_z = 1e-5; % [rad/s]
 
 % Velocity Initialization
-Vx_E_0 = 1e-5; % [m/s]
-Vy_E_0 = 1e-5; % [m/s]
-Vz_E_0 = 1e-5; % [m/s]
+R_ET = [
+    -sind(launchLat)*cosd(launchLon), -sind(launchLon), -cosd(launchLat)*cosd(launchLon);
+    -sind(launchLat)*sind(launchLon),  cosd(launchLon), -cosd(launchLat)*sind(launchLon);
+     cosd(launchLat),            0,         -sind(launchLat)
+];
+
+R_TB = quat2rotm(q_0');
+R_EB = R_ET * R_TB;
+
+V_0_B = [1; 1e-5; 1e-5];
+
+V_0_E = R_EB * V_0_B;
 
 % Initial Mass
 m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
@@ -68,9 +77,9 @@ m_0 = kins.m_0 + MotorModel.emptyWt + MotorModel.propWt;
 x_0 = [
     q_0;
     launch_ECEF_m';
-    Vx_E_0;
-    Vy_E_0;
-    Vz_E_0;
+    V_0_E(1);
+    V_0_E(2);
+    V_0_E(3);
     w_ib_x;
     w_ib_y;
     w_ib_z;
@@ -79,7 +88,6 @@ x_0 = [
 
 %% Load Simulink Model
 modelName = 'FlightSimulation';
-runTime = 150; % [s]
 saveRate = 10; % [Hz]
 saveDir = fullfile(pwd, 'SIM_OUT');
 
@@ -90,7 +98,7 @@ open_system(modelName);
 % Start Timer
 tic
 
-SimOut = sim(modelName, 'StopTime', num2str(runTime), 'SaveOutput', 'on');
+SimOut = sim(modelName, 'StopTime', num2str(simCfg.time.tf), 'SaveOutput', 'on');
 
 runTime = toc;
 

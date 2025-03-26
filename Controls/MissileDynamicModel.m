@@ -53,7 +53,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
 
     v_hat_B = R_EB' * v_hat_ecef; % [1] Unit Vector of Velocity in Body
 
-    AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA)
+    AoA = atan2(v_hat_B(3), v_hat_B(1)); AoA = rad2deg(AoA);
 
     beta = atan2(v_hat_B(2), v_hat_B(1));
 
