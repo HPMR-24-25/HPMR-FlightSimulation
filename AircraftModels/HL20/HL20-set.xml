@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<!--
+************************************************************************
+Flight Gear 0.9.3/0.9.8a config file for HL-20 network simulation
+
+Background information: http://oea.larc.nasa.gov/PAIS/HL-20.html
+
+
+Copyright 1990-2023 The MathWorks, Inc.
+
+R. Aberg
+2003-NOV-26
+************************************************************************
+-->
+
+<PropertyList>
+
+    <sim>
+        <description>NASA HL-20 Personnel Launch System</description>
+
+        <flight-model>network</flight-model>
+
+        <model>
+            <path>Aircraft/HL20/Models/HL20.xml</path>
+        </model>
+        <sound>
+            <path>Aircraft/HL20/Sounds/hl20-sound.xml</path>
+        </sound>
+        <systems>
+            <electrical>
+                <path>Aircraft/Generic/generic-electrical.xml</path>
+            </electrical>
+        </systems>
+        <!-- The following piece of code sets the default view as the chase view -->
+        <current-view>
+            <view-number type="int">2</view-number>
+        </current-view>
+
+    </sim>
+
+</PropertyList>

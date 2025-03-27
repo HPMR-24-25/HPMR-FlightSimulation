@@ -27,7 +27,7 @@ MotorModel = initMotorModel();
 time.dt = 0.01; % [s] Time Step
 time.t0 = 0; % [s] Initial Time
 % time.tf = 60*3; % [s] Final Time
-time.tf = 60;
+time.tf = 75;
 
 simCfg.time = time;
 
@@ -35,7 +35,7 @@ simCfg.time = time;
 % [launchLat, launchLon, launchAlt] = selectLaunchLocation();
 launchLat =  42.2738703; % [deg] Latitude
 launchLon = -71.8098593; % [deg] Longitude
-launchAlt = 180; % [m] Altitude MSL
+launchAlt = 25; % [m] Altitude MSL
 
 launchLLA = [launchLat, launchLon, launchAlt];
 % currLLA = launchLLA;
@@ -45,7 +45,7 @@ launch_ECEF_m = lla2ecef(launchLLA);
 % Attitude Initialization
 yaw_0 = deg2rad(0);
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(86);
+pitch_0 = deg2rad(45);
 
 eul_0 = [roll_0; pitch_0; yaw_0];
 
