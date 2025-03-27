@@ -12,9 +12,9 @@ R. Aberg
 
 <PropertyList>
 
-    <path>HL20.ac</path>
+    <path>MissileModel.ac</path>
 
-    <animation>
+    <!-- <animation>
         <type>rotate</type>
         <object-name>NoseGear</object-name>
         <property>/gear/gear[0]/position-norm</property>
@@ -228,6 +228,6 @@ R. Aberg
             <y>-0.86</y>
             <z>0.93</z>
         </axis>
-    </animation>
+    </animation> -->
 
 </PropertyList>

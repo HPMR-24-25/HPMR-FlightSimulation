@@ -15,7 +15,7 @@ Copyright 2018-2023 The MathWorks, Inc.
             <name>wind</name>
             <type>avionics</type>
             <mode>looped</mode>
-            <path>Aircraft/HL20/Sounds/wind1.wav</path>
+            <path>Aircraft/HPMR/Sounds/wind1.wav</path>
             <property>velocities/airspeed-kt</property>
             <volume>
                 <property>position/altitude-ft</property>

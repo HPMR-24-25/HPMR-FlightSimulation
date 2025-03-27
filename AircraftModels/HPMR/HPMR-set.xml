@@ -16,15 +16,15 @@ R. Aberg
 <PropertyList>
 
     <sim>
-        <description>NASA HL-20 Personnel Launch System</description>
+        <description>WPI Defense Dome</description>
 
         <flight-model>network</flight-model>
 
         <model>
-            <path>Aircraft/HL20/Models/HL20.xml</path>
+            <path>Aircraft/HPMR/Models/HPMR.xml</path>
         </model>
         <sound>
-            <path>Aircraft/HL20/Sounds/hl20-sound.xml</path>
+            <path>Aircraft/HPMR/Sounds/hpmr-sound.xml</path>
         </sound>
         <systems>
             <electrical>
