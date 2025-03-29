@@ -33,9 +33,11 @@ simCfg.time = time;
 
 %% Launch Site Initialization
 % [launchLat, launchLon, launchAlt] = selectLaunchLocation();
-launchLat =  42.2738703; % [deg] Latitude
-launchLon = -71.8098593; % [deg] Longitude
-launchAlt = 25; % [m] Altitude MSL
+% launchLat =  42.2738703; % [deg] Latitude
+% launchLon = -71.8098593; % [deg] Longitude
+launchLat = 42.267;
+launchLon = -71.867833;
+launchAlt = 308; % [m] Altitude MSL
 
 launchLLA = [launchLat, launchLon, launchAlt];
 % currLLA = launchLLA;
@@ -43,9 +45,9 @@ launchLLA = [launchLat, launchLon, launchAlt];
 launch_ECEF_m = lla2ecef(launchLLA);
 
 % Attitude Initialization
-yaw_0 = deg2rad(0);
+yaw_0 = deg2rad(290);
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(45);
+pitch_0 = deg2rad(60);
 
 eul_0 = [roll_0; pitch_0; yaw_0];
 
