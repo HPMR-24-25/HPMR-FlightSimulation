@@ -18,6 +18,12 @@ function ModelData = initRocketAeroModel()
     ModelData.Cd_table = Cd_table;
     ModelData.Cl_table = Cl_table;
 
+    [MachGrid, AoAGrid] = meshgrid(unique_MachNumbers, unique_AoA);
+
+    % Interpolate Cd and Cl values into a structured grid - For Simulink
+    ModelData.CdGrid = griddata(MachNumbers, AoA, Cd_table, MachGrid, AoAGrid, 'linear');
+    ModelData.ClGrid = griddata(MachNumbers, AoA, Cl_table, MachGrid, AoAGrid, 'linear');
+
     % Create Scattered Interpolant
     CD_lookup = scatteredInterpolant(MachNumbers, AoA, Cd_table, 'linear', 'none');
     CL_lookup = scatteredInterpolant(MachNumbers, AoA, Cd_table, 'linear', 'none');

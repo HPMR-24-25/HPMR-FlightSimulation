@@ -1,0 +1,233 @@
+<?xml version="1.0"?>
+<!--
+************************************************************************
+Flight Gear 0.9.3/0.9.8a config file for HL-20 network simulation
+
+Copyright 1990-2023 The MathWorks, Inc.
+
+R. Aberg
+2004-MAY-17
+************************************************************************
+-->
+
+<PropertyList>
+
+    <path>MissileModel.ac</path>
+
+    <!-- <animation>
+        <type>rotate</type>
+        <object-name>NoseGear</object-name>
+        <property>/gear/gear[0]/position-norm</property>
+        <factor>-110</factor>
+        <offset-deg>110</offset-deg>
+        <center>
+            <x-m>-2.57</x-m>
+            <y-m>0</y-m>
+            <z-m>-0.25</z-m>
+        </center>
+        <axis>
+            <x>0</x>
+            <y>1</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>translate</type>
+        <object-name>NoseGear</object-name>
+        <property>/gear/gear[0]/compression-norm</property>
+        <factor>1</factor>
+        <axis>
+            <x>0</x>
+            <y>0</y>
+            <z>1</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>RightMainGear</object-name>
+        <property>/gear/gear[1]/position-norm</property>
+        <factor>140</factor>
+        <offset-deg>-140</offset-deg>
+        <center>
+            <x-m>1.17</x-m>
+            <y-m>1.34</y-m>
+            <z-m>-0.41</z-m>
+        </center>
+        <axis>
+            <x>1</x>
+            <y>0</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>translate</type>
+        <object-name>RightMainGear</object-name>
+        <property>/gear/gear[1]/compression-norm</property>
+        <factor>1</factor>
+        <axis>
+            <x>0</x>
+            <y>0</y>
+            <z>1</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>LeftMainGear</object-name>
+        <property>/gear/gear[2]/position-norm</property>
+        <factor>-140</factor>
+        <offset-deg>140</offset-deg>
+        <center>
+            <x-m>1.17</x-m>
+            <y-m>-1.34</y-m>
+            <z-m>-0.41</z-m>
+        </center>
+        <axis>
+            <x>1</x>
+            <y>0</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>translate</type>
+        <object-name>LeftMainGear</object-name>
+        <property>/gear/gear[2]/compression-norm</property>
+        <factor>1</factor>
+        <axis>
+            <x>0</x>
+            <y>0</y>
+            <z>1</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>LeftUpperFlap</object-name>
+        <property>/surface-positions/elevator-pos-norm</property>
+        <factor>-60</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>2.61</x-m>
+            <y-m>-1.08</y-m>
+            <z-m>0.41</z-m>
+        </center>
+        <axis>
+            <x>0</x>
+            <y>1</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>LeftLowerFlap</object-name>
+        <property>/surface-positions/flap-pos-norm</property>
+        <factor>60</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>2.61</x-m>
+            <y-m>-1.08</y-m>
+            <z-m>-0.51</z-m>
+        </center>
+        <axis>
+            <x>0</x>
+            <y>1</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>RightUpperFlap</object-name>
+        <property>/surface-positions/spoilers-pos-norm</property>
+        <factor>-60</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>2.61</x-m>
+            <y-m>1.01</y-m>
+            <z-m>0.41</z-m>
+        </center>
+        <axis>
+            <x>0</x>
+            <y>1</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>RightLowerFlap</object-name>
+        <property>/surface-positions/speedbrake-pos-norm</property>
+        <factor>60</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>2.61</x-m>
+            <y-m>1.01</y-m>
+            <z-m>-0.51</z-m>
+        </center>
+        <axis>
+            <x>0</x>
+            <y>1</y>
+            <z>0</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>Rudder</object-name>
+        <property>/surface-positions/rudder-pos-norm</property>
+        <factor>15</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>2.09</x-m>
+            <y-m>0</y-m>
+            <z-m>0.7</z-m>
+        </center>
+        <axis>
+            <x>0</x>
+            <y>0</y>
+            <z>1</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>RightAileron</object-name>
+        <property>/surface-positions/right-aileron-pos-norm</property>
+        <factor>30</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>3.13</x-m>
+            <y-m>2.34</y-m>
+            <z-m>0.93</z-m>
+        </center>
+        <axis>
+            <x>0.56</x>
+            <y>0.86</y>
+            <z>0.93</z>
+        </axis>
+    </animation>
+
+    <animation>
+        <type>rotate</type>
+        <object-name>LeftAileron</object-name>
+        <property>/surface-positions/left-aileron-pos-norm</property>
+        <factor>30</factor>
+        <offset-deg>0</offset-deg>
+        <center>
+            <x-m>3.13</x-m>
+            <y-m>-2.34</y-m>
+            <z-m>0.93</z-m>
+        </center>
+        <axis>
+            <x>0.56</x>
+            <y>-0.86</y>
+            <z>0.93</z>
+        </axis>
+    </animation> -->
+
+</PropertyList>

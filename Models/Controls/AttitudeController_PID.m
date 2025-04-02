@@ -57,7 +57,7 @@ function [canardInput, T, err] = AttitudeController_PID(x, desiredAttitude, G_1,
     C_p = (kins.diameter/2) + (kins.canard.height/2);
 
     A = [
-        C_p -C_p C_p -C_p;
+        ((kins.diameter/2) + (kins.canard.height/2)) -((kins.diameter/2) + (kins.canard.height/2)) ((kins.diameter/2) + (kins.canard.height/2)) -((kins.diameter/2) + (kins.canard.height/2));
         0 kins.x_cp 0 -kins.x_cp;
         -kins.x_cp 0 kins.x_cp 0;
     ];

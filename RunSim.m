@@ -183,7 +183,7 @@ attErr = zeros(3, numTimePts);
 %% Fill steady state data for set period of time (Simulate Launcher)
 steadyStateDuration = 5; % [s]
 numSteadyPts = steadyStateDuration / time.dt;
-
+ 
 % Pre-Fill steady state values
 tRecord(1:numSteadyPts) = linspace(-steadyStateDuration+time.dt, time.t0, numSteadyPts);
 xRecord(:, 1:numSteadyPts) = repmat(x_0, 1, numSteadyPts); % Repeat initial state
