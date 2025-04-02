@@ -1,6 +1,6 @@
 %% WPI High Power Rocket MQP - Flight Simulator
 % Author: Daniel Pearson (djpearson@wpi.edu)
-% Version: 12.15.2024
+% Version: 4.2.2025
 
 clear variables; close all; clc;
 
@@ -45,9 +45,9 @@ launchLLA = [launchLat, launchLon, launchAlt];
 launch_ECEF_m = lla2ecef(launchLLA);
 
 % Attitude Initialization
-yaw_0 = deg2rad(290);
+yaw_0 = deg2rad(0);
 roll_0 = deg2rad(0);
-pitch_0 = deg2rad(60);
+pitch_0 = deg2rad(85);
 
 eul_0 = [roll_0; pitch_0; yaw_0];
 

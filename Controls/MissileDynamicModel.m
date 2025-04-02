@@ -101,7 +101,7 @@ function [x_dot, accel_ecef] = MissileDynamicModel(x, t, canardInput, AeroModel,
     F_x_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 + canardInput.d3 - canardInput.d2 - canardInput.d4);
     F_y_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d1 - canardInput.d3);
     F_z_B = AeroModel.canard.CL_delta * q_inf * kins.canard.S * (canardInput.d4 - canardInput.d2);
-    F_c_B = [F_x_B; F_y_B; F_z_B];
+    F_c_B = [F_x_B; F_y_B; F_z_B]
 
     F_c_ECEF = R_EB * F_c_B;
 
